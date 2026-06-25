@@ -1,0 +1,23 @@
+{
+  "name": "venm-auth-demo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently -n client,server -c cyan,yellow \"vite\" \"cd server && pnpm dev\"",
+    "dev:client": "vite",
+    "dev:server": "cd server && pnpm dev",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "venm-auth": "workspace:*"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.3.0",
+    "concurrently": "^10.0.3",
+    "vite": "^5.4.0"
+  }
+}

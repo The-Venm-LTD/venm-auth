@@ -1,0 +1,19 @@
+{
+  "name": "venm-auth-demo-server",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon --watch . --ignore node_modules/ --ext js,json,env index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.0",
+    "express": "^5.0.0",
+    "venm-auth": "workspace:*"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}

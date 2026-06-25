@@ -1,0 +1,91 @@
+{
+  "name": "venm-auth",
+  "version": "0.1.0",
+  "private": false,
+  "description": "React authentication SDK for Venm — OAuth, session management, React hooks & components",
+  "license": "MIT",
+  "type": "module",
+  "packageManager": "pnpm@9.15.4",
+
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "import": "./dist/server/index.js",
+      "require": "./dist/server/index.cjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks/index.d.ts",
+      "import": "./dist/hooks/index.js",
+      "require": "./dist/hooks/index.cjs"
+    },
+    "./components": {
+      "types": "./dist/components/index.d.ts",
+      "import": "./dist/components/index.js",
+      "require": "./dist/components/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "clean": "rimraf dist .tsbuildinfo",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "prepublishOnly": "pnpm run build"
+  },
+
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+
+  "dependencies": {
+    "axios": "^1.18.1",
+    "cookie-parser": "^1.4.7",
+    "express": "^5.2.1",
+    "jose": "^6.2.3",
+    "mongodb": "^7.3.0"
+  },
+
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/express": "^5.0.6",
+    "@types/node": "^26.0.1",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react-swc": "^4.3.0",
+    "jsdom": "^25.0.1",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "rimraf": "^6.0.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+
+  "engines": {
+    "node": ">=18"
+  },
+
+  "sideEffects": false
+}
