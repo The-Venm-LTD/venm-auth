@@ -6,8 +6,13 @@ export const POPUP_CHANNEL = "venm_auth_response";
 
 /**
  * Build the HTML page served after an OAuth provider redirects back.
- * The page uses postMessage to send the authorization code to the popup
- * opener, then closes itself.
+ *
+ * The page tries `window.opener.postMessage` as a fast path for providers
+ * that do NOT set Cross-Origin-Opener-Policy (e.g., some Facebook flows).
+ * When COOP has severed the opener (Google), the try/catch silently catches
+ * the error — the main page will pick up the result via server-side polling.
+ *
+ * Either way, the popup closes itself afterwards.
  *
  * @param code  The OAuth authorization code (empty string on error).
  * @param error Optional error message to display and send.
@@ -22,9 +27,9 @@ export function callbackHtml(code: string, error?: string, state?: string): stri
 <body>
 <script>
   (function() {
-    var targetOrigin = "*";
-    try { if (window.opener && window.opener.origin) { targetOrigin = window.opener.origin; } } catch(e) {}
-    window.opener.postMessage({ channel: "${POPUP_CHANNEL}", error: ${escapedError} }, targetOrigin);
+    try {
+      window.opener.postMessage({ channel: "${POPUP_CHANNEL}", error: ${escapedError} }, "*");
+    } catch(e) {}
     window.close();
   })();
 </script>
@@ -42,13 +47,13 @@ export function callbackHtml(code: string, error?: string, state?: string): stri
 <body>
 <script>
   (function() {
-    var targetOrigin = "*";
-    try { if (window.opener && window.opener.origin) { targetOrigin = window.opener.origin; } } catch(e) {}
-    window.opener.postMessage({
-      channel: "${POPUP_CHANNEL}",
-      code: ${escapedCode},
-      state: ${escapedState}
-    }, targetOrigin);
+    try {
+      window.opener.postMessage({
+        channel: "${POPUP_CHANNEL}",
+        code: ${escapedCode},
+        state: ${escapedState}
+      }, "*");
+    } catch(e) {}
     window.close();
   })();
 </script>

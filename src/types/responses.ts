@@ -29,6 +29,12 @@ export interface PopupOptions {
   width?: number;
   height?: number;
   redirectUri?: string;
+  /**
+   * Unique session ID for server-side OAuth result polling.
+   * Required when the OAuth provider uses COOP headers that sever
+   * the popup's window.opener reference (e.g., Google).
+   */
+  authSessionId?: string;
 }
 
 export interface RedirectOptions {

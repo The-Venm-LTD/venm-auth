@@ -30,5 +30,8 @@ export { VenmAuthError, errorHandler } from "./middleware/error-handler";
 export { validateState, stateCookieMiddleware, CSRFError } from "./middleware/csrf";
 
 // ── Rate Limit Middleware ──────────────────────────────────────────
-export { createRateLimiter, oauthRateLimiter, sessionRateLimiter, InMemoryStore } from "./middleware/rate-limit";
+export { createRateLimiter, oauthRateLimiter, resultRateLimiter, sessionRateLimiter, InMemoryStore } from "./middleware/rate-limit";
 export type { RateLimitConfig, RateLimitStore } from "./middleware/rate-limit";
+
+// ── OAuth Result Store ─────────────────────────────────────────────
+export { OauthResultStore } from "./store/oauth-result-store";

@@ -16,8 +16,6 @@ import { PopupManager } from "../services/popup-manager";
 import { SessionService } from "../services/session-service";
 import { GoogleOAuthProvider } from "../providers/google";
 import { FacebookOAuthProvider } from "../providers/facebook";
-// import { getPopupRedirectUri } from "../utils/url";
-
 // ── Reducer ──────────────────────────────────────────────────────────
 
 export function authReducer(state: AuthState, action: AuthAction): AuthState {
@@ -148,11 +146,16 @@ export function AuthProvider({
 
   // ── Notify on auth state change ──────────────────────────────────
 
+  // Store callback in a ref to avoid stale closures
+  // when users inline onAuthStateChange
+  const onAuthStateChangeRef = useRef(onAuthStateChange);
+  onAuthStateChangeRef.current = onAuthStateChange;
+
   useEffect(() => {
     if (!state.loading) {
-      onAuthStateChange?.(state);
+      onAuthStateChangeRef.current?.(state);
     }
-  }, [state, onAuthStateChange]);
+  }, [state]);
 
   // ── Cleanup on unmount ───────────────────────────────────────────
 
@@ -182,11 +185,9 @@ export function AuthProvider({
           resolvedConfig
         );
 
-        // const redirectUri = getPopupRedirectUri();
         const response = await authService.loginWithProvider(
           provider,
           authorizationCode,
-          // redirectUri,
           codeVerifier
         );
 

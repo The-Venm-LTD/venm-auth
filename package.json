@@ -6,6 +6,25 @@
   "license": "MIT",
   "type": "module",
   "packageManager": "pnpm@9.15.4",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/venm/venm-auth.git"
+  },
+  "bugs": {
+    "url": "https://github.com/venm/venm-auth/issues"
+  },
+  "homepage": "https://github.com/venm/venm-auth#readme",
+  "keywords": [
+    "react",
+    "authentication",
+    "oauth",
+    "google",
+    "facebook",
+    "login",
+    "sso",
+    "jwt",
+    "session"
+  ],
 
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",

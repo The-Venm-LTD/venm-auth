@@ -24,7 +24,6 @@ export class AuthService {
   async loginWithProvider(
     provider: ProviderType,
     authorizationCode: string,
-    // redirectUri: string,
     codeVerifier?: string
   ): Promise<AuthResponse> {
     const endpoint =
@@ -35,7 +34,6 @@ export class AuthService {
     return this.http.request<AuthResponse>("POST", endpoint, {
       body: {
         code: authorizationCode,
-        // redirectUri,
         ...(codeVerifier ? { codeVerifier } : {}),
       },
       skipAuth: true,

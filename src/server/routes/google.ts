@@ -5,6 +5,7 @@ import { handleGoogleCallback } from "../oauth/google";
 import { generateTokens } from "../jwt/generate";
 import { stateCookieMiddleware } from "../middleware/csrf";
 import { callbackHtml } from "../utils/callback-html";
+import type { OauthResultStore } from "../store/oauth-result-store";
 
 // ── Route Builder ──────────────────────────────────────────────────
 
@@ -16,7 +17,8 @@ export function createGoogleRoutes(
   config: GoogleOAuthConfig,
   jwtSecret: string,
   db: DatabaseAdapter,
-  prefix: string = "/api/auth"
+  prefix: string = "/api/auth",
+  oauthResultStore?: OauthResultStore
 ): Router {
   const router = Router();
 
@@ -33,7 +35,12 @@ export function createGoogleRoutes(
    */
   router.get("/", stateCookieMiddleware.issue, (req: Request, res: Response) => {
     console.log(`[venm-auth] Google OAuth: initiating redirect, state=${req.query.state ? "present" : "missing"}, code_challenge=${req.query.code_challenge ? "present" : "missing"}`);
-    const { state, code_challenge, redirect_uri } = req.query;
+    const { state, code_challenge, redirect_uri, auth_session_id } = req.query;
+
+    // Store authSessionId mapping so the callback can look it up from the state
+    if (oauthResultStore && state && auth_session_id) {
+      oauthResultStore.setStateMapping(state as string, auth_session_id as string);
+    }
 
     const protocol = req.protocol;
     const host = req.get("host") ?? "localhost:3000";
@@ -74,17 +81,28 @@ export function createGoogleRoutes(
         console.log(`[venm-auth] Google OAuth: callback received, code=${code ? "present" : "missing"}, error=${error ?? "none"}`);
 
         if (error) {
-          res.send(callbackHtml("", `Google sign-in error: ${error}`));
+          const errorMessage = `Google sign-in error: ${error}`;
+          if (oauthResultStore && state) {
+            oauthResultStore.storeError(state as string, errorMessage);
+          }
+          res.send(callbackHtml("", errorMessage));
           return;
         }
 
         if (!code || typeof code !== "string") {
-          res.status(400).send(callbackHtml("", "Missing authorization code"));
+          const errorMessage = "Missing authorization code";
+          if (oauthResultStore && state) {
+            oauthResultStore.storeError(state as string, errorMessage);
+          }
+          res.status(400).send(callbackHtml("", errorMessage));
           return;
+        }          // The popup's opener may have been severed by COOP headers, so
+        // store the result on the server for the client to poll and retrieve.
+        if (oauthResultStore) {
+          oauthResultStore.storeResult(state as string, code);
         }
 
-        // Send the authorization code back to the popup via postMessage.
-        // The client will use this code in a POST request to exchange it for tokens.
+        // Send a simple page that tries postMessage (fast path) and closes.
         res.send(callbackHtml(code, undefined, state as string | undefined));
       } catch (err) {
         const message = err instanceof Error ? err.message : "Google OAuth callback failed";
@@ -101,11 +119,7 @@ export function createGoogleRoutes(
    * Response: { user, session }
    */
   router.post("/", async (req: Request, res: Response) => {
-    const { code, 
-      // redirectUri, 
-      codeVerifier } = req.body ?? {};
-
-    // console.log("POST REQUEST: ", code, " - ", redirectUri, " - ", codeVerifier)
+    const { code, codeVerifier } = req.body ?? {};
 
     if (!code || typeof code !== "string") {
       console.warn(`[venm-auth] Google OAuth: POST missing code, body=${JSON.stringify(req.body)}`);
@@ -121,8 +135,6 @@ export function createGoogleRoutes(
       const protocol = req.protocol;
       const host = req.get("host") ?? "localhost:3000";
       const effectiveRedirectUri = `${protocol}://${host}${callbackPath}`;
-
-      // console.log("Callbacks: redirectUri: ", redirectUri, "     effectiveRedirectUri: ", effectiveRedirectUri)
 
       console.log(`[venm-auth] Google OAuth: exchanging code with Google (redirectUri=${effectiveRedirectUri})`);
 

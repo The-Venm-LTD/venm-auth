@@ -2,7 +2,7 @@ import type { ProviderType } from "../types/auth";
 import type { SDKConfig } from "../types/config";
 import { PopupManager } from "../services/popup-manager";
 import { generateState } from "../utils/crypto";
-import { buildAuthorizationUrl, getPopupRedirectUri } from "../utils/url";
+import { buildAuthorizationUrl } from "../utils/url";
 
 interface OAuthProvider {
   provider: ProviderType;
@@ -21,6 +21,7 @@ export class FacebookOAuthProvider implements OAuthProvider {
   ): Promise<{ authorizationCode: string; codeVerifier?: string }> {
     // Facebook does not support PKCE; use state parameter for CSRF protection
     const state = generateState();
+    const authSessionId = generateState(24); // Unique session for server-side result relay
     const apiUrl = config.apiUrl!;
     const clientId = config.oauth?.facebook?.appId ?? "";
 
@@ -36,9 +37,10 @@ export class FacebookOAuthProvider implements OAuthProvider {
       provider: this.provider,
       state,
       scopes: ["email", "public_profile"],
+      authSessionId,
     });
 
-    const result = await popupManager.open(authUrl);
+    const result = await popupManager.open(authUrl, { authSessionId });
 
     if (result.state !== state) {
       throw {

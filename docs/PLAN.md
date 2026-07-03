@@ -302,5 +302,6 @@ That's all the developer needs to write. Everything else is handled by the packa
 | 4 | Client SDK alignment (config changes, API paths, popup flow) | ✅ Complete |
 | 5 | Build + Package config (tsup multi-entry, exports) | ✅ Complete |
 | 6 | Demo app + tests | ✅ Complete |
+| 7 | **COOP fix** — Server-side result relay replaces broken `postMessage` for Google OAuth popups (adds `OauthResultStore`, `GET /result/:authSessionId` polling, `authSessionId` flow) | ✅ Complete |
 
-**Total:** ~50 files, ~4,000 lines of code
+**Total:** ~52 files, ~4,200 lines of code

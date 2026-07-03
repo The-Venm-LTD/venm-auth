@@ -6,12 +6,14 @@ import type { GoogleOAuthConfig } from "./oauth/google";
 import type { FacebookOAuthConfig } from "./oauth/facebook";
 import { createGoogleRoutes } from "./routes/google";
 import { createFacebookRoutes } from "./routes/facebook";
+import { createResultRoutes } from "./routes/result";
 import { createSessionRoutes } from "./routes/session";
 import { createUserRoutes } from "./routes/user";
 import { createLogoutRoutes } from "./routes/logout";
 import { createHealthRoutes } from "./routes/health";
+import { OauthResultStore } from "./store/oauth-result-store";
 import { errorHandler } from "./middleware/error-handler";
-import { oauthRateLimiter, sessionRateLimiter } from "./middleware/rate-limit";
+import { oauthRateLimiter, resultRateLimiter, sessionRateLimiter } from "./middleware/rate-limit";
 import { csrfProtection } from "./middleware/csrf";
 
 // ── Config Types ────────────────────────────────────────────────────
@@ -91,14 +93,21 @@ export function createVenmAuth(config: VenmAuthConfig): Router {
   // ── Health ─────────────────────────────────────────────────────
   router.use("/health", createHealthRoutes());
 
+  // ── OAuth Result Store (in-memory, for server-side result relay) ──
+  const oauthResultStore = new OauthResultStore();
+  oauthResultStore.startCleanup();
+
   // ── OAuth Routes ──────────────────────────────────────────────
   if (google) {
-    router.use("/google", oauthRateLimiter, csrfProtection(config.allowedOrigins), createGoogleRoutes(google, jwtSecret, db, config.prefix));
+    router.use("/google", oauthRateLimiter, csrfProtection(config.allowedOrigins), createGoogleRoutes(google, jwtSecret, db, config.prefix, oauthResultStore));
   }
 
   if (facebook) {
-    router.use("/facebook", oauthRateLimiter, csrfProtection(config.allowedOrigins), createFacebookRoutes(facebook, jwtSecret, db, config.prefix));
+    router.use("/facebook", oauthRateLimiter, csrfProtection(config.allowedOrigins), createFacebookRoutes(facebook, jwtSecret, db, config.prefix, oauthResultStore));
   }
+
+  // ── OAuth Result Retrieval (polled by client to bypass COOP) ──
+  router.use("/result", resultRateLimiter, createResultRoutes(oauthResultStore));
 
   // ── Session & User Routes ─────────────────────────────────────
   router.use("/session", sessionRateLimiter, createSessionRoutes(jwtSecret, db));

@@ -27,6 +27,7 @@ export function buildAuthorizationUrl(config: {
   codeChallenge?: string;
   scopes?: string[];
   redirectUri?: string;
+  authSessionId?: string;
 }): string {
   const endpoint =
     config.provider === "google"
@@ -50,18 +51,12 @@ export function buildAuthorizationUrl(config: {
     url.searchParams.set("redirect_uri", config.redirectUri);
   }
 
+  if (config.authSessionId) {
+    url.searchParams.set("auth_session_id", config.authSessionId);
+  }
+
   return url.toString();
 }
-
-/**
- * Get the default popup redirect URI.
- * This is where the OAuth popup will redirect back to, and the server
- * callback HTML sends the result via postMessage.
- */
-// export function getPopupRedirectUri(): string {
-//   if (typeof window === "undefined") return "";
-//   return `${window.location.origin}/__venm/auth/callback`;
-// }
 
 /**
  * Parse auth response parameters from a URL (used for redirect-based flows).

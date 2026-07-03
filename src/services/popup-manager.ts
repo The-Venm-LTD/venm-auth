@@ -19,6 +19,7 @@ export class PopupManager {
   private popup: Window | null = null;
   private logger: ReturnType<typeof createLogger>;
   private expectedOrigin: string;
+  private baseUrl: string;
   private cleanupFns: Array<() => void> = [];
 
   constructor(config: SDKConfig) {
@@ -26,10 +27,16 @@ export class PopupManager {
     // The expected origin is the origin of the API server (developer's Express app)
     const apiUrl = config.apiUrl ?? DEFAULT_BASE_URLS.production;
     try {
-      this.expectedOrigin = new URL(apiUrl).origin;
+      const url = new URL(apiUrl);
+      this.expectedOrigin = url.origin;
+      this.baseUrl = apiUrl.replace(/\/+$/, "");
     } catch {
       // If apiUrl is a relative path (production), accept any origin
       this.expectedOrigin = "*";
+      // Resolve relative URL against the current page origin
+      this.baseUrl = typeof window !== "undefined"
+        ? `${window.location.origin}${apiUrl}`.replace(/\/+$/, "")
+        : apiUrl.replace(/\/+$/, "");
     }
   }
 
@@ -78,27 +85,65 @@ export class PopupManager {
         } satisfies AuthError);
       }, POPUP_TIMEOUT_MS);
 
-      const closeInterval = setInterval(() => {
-        try {
-          if (this.popup?.closed) {
-            clearInterval(closeInterval);
-            clearTimeout(timeoutId);
-            this.cleanup();
-            reject({
-              code: "POPUP_CLOSED",
-              message: "Authentication popup was closed by the user.",
-            } satisfies AuthError);
-          }
-        } catch {
-          // Cross-Origin-Opener-Policy (COOP) can sever the relationship
-          // with the popup, making .closed inaccessible. Skip this poll
-          // cycle — the popup will return to our origin on completion, or
-          // the overall timeout will fire as a safety net.
-        }
-      }, 200);
+      const authSessionId = options?.authSessionId;
 
+      // ── Server-side result polling (handles COOP-severed popups) ──
+      //
+      // When the OAuth provider (e.g. Google) uses Cross-Origin-Opener-Policy
+      // headers, window.opener is severed and postMessage won't work. The
+      // OAuth callback stores the auth code on the server; we poll for it.
+      let pollInterval: ReturnType<typeof setInterval> | null = null;
+
+      if (authSessionId) {
+        const resultUrl = `${this.baseUrl}/result/${encodeURIComponent(authSessionId)}`;
+        const interval = setInterval(async () => {
+          try {
+            const response = await fetch(resultUrl, {
+              method: "GET",
+              headers: { "Accept": "application/json" },
+              signal: AbortSignal.timeout(5_000),
+            });
+
+            if (response.ok) {
+              const data = (await response.json()) as {
+                status?: "PENDING";
+                code?: string;
+                state?: string;
+                error?: string;
+              };
+
+              if (data.status === "PENDING") {
+                // Result not yet stored — poll again
+                return;
+              }
+
+              if (data.error) {
+                clearTimeout(timeoutId);
+                clearInterval(interval);
+                this.cleanup();
+                reject({
+                  code: "PROVIDER_ERROR",
+                  message: data.error,
+                } satisfies AuthError);
+                return;
+              }
+
+              if (data.code && data.state) {
+                clearTimeout(timeoutId);
+                clearInterval(interval);
+                this.cleanup();
+                resolve({ code: data.code, state: data.state });
+              }
+            }
+          } catch {
+            // Network errors are transient — poll again on next interval
+          }
+        }, 2000);
+        pollInterval = interval;
+      }
+
+      // ── Post-message listener (fast path for non-COOP providers) ──
       const messageHandler = (event: MessageEvent) => {
-        // Validate origin (skip if expected origin is wildcard)
         if (this.expectedOrigin !== "*" && event.origin !== this.expectedOrigin) {
           this.logger.warn(
             `Ignoring message from unexpected origin: ${event.origin}`
@@ -107,16 +152,13 @@ export class PopupManager {
         }
 
         const data = event.data;
-        if (
-          !data ||
-          data.channel !== POPUP_MESSAGE_CHANNEL
-        ) {
+        if (!data || data.channel !== POPUP_MESSAGE_CHANNEL) {
           return;
         }
 
         if (data.error) {
           clearTimeout(timeoutId);
-          clearInterval(closeInterval);
+          if (pollInterval) clearInterval(pollInterval);
           this.cleanup();
           reject({
             code: "PROVIDER_ERROR",
@@ -127,7 +169,7 @@ export class PopupManager {
 
         if (data.code && data.state) {
           clearTimeout(timeoutId);
-          clearInterval(closeInterval);
+          if (pollInterval) clearInterval(pollInterval);
           this.cleanup();
           resolve({ code: data.code, state: data.state });
         }
@@ -138,7 +180,9 @@ export class PopupManager {
         window.removeEventListener("message", messageHandler);
       });
       this.cleanupFns.push(() => clearTimeout(timeoutId));
-      this.cleanupFns.push(() => clearInterval(closeInterval));
+      if (pollInterval) {
+        this.cleanupFns.push(() => clearInterval(pollInterval));
+      }
     });
   }
 

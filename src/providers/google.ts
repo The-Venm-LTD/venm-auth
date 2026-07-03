@@ -2,10 +2,7 @@ import type { ProviderType } from "../types/auth";
 import type { SDKConfig } from "../types/config";
 import { PopupManager } from "../services/popup-manager";
 import { generatePKCEPair, generateState } from "../utils/crypto";
-import { 
-  buildAuthorizationUrl,
-  // getPopupRedirectUri
-} from "../utils/url";
+import { buildAuthorizationUrl } from "../utils/url";
 
 interface OAuthProvider {
   provider: ProviderType;
@@ -24,6 +21,7 @@ export class GoogleOAuthProvider implements OAuthProvider {
   ): Promise<{ authorizationCode: string; codeVerifier?: string }> {
     const { verifier, challenge } = await generatePKCEPair();
     const state = generateState();
+    const authSessionId = generateState(24); // Unique session for server-side result relay
     const apiUrl = config.apiUrl!;
     const clientId = config.oauth?.google?.clientId ?? "";
 
@@ -40,9 +38,10 @@ export class GoogleOAuthProvider implements OAuthProvider {
       state,
       codeChallenge: challenge,
       scopes: ["openid", "email", "profile"],
+      authSessionId,
     });
 
-    const result = await popupManager.open(authUrl);
+    const result = await popupManager.open(authUrl, { authSessionId });
 
     if (result.state !== state) {
       throw {

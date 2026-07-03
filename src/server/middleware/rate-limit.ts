@@ -163,6 +163,23 @@ export const oauthRateLimiter = createRateLimiter({
 });
 
 /**
+ * Pre-configured rate limiter for the OAuth result polling endpoint.
+ * Higher limit (30/min) because the client polls every 2 seconds
+ * while waiting for the user to complete OAuth consent.
+ * Keyed by authSessionId so each OAuth attempt gets its own budget.
+ */
+export const resultRateLimiter = createRateLimiter({
+  windowMs: 60_000,
+  maxRequests: 30,
+  keyGenerator: (req) => {
+    // Extract authSessionId from the path (e.g. "/gNuRP4NNwvAv5fo" → "/gNuRP4NNwvAv5fo")
+    // req.path is relative to the mount point — route params aren't parsed yet
+    const pathSegment = req.path.split("/").filter(Boolean)[0] ?? "unknown";
+    return `result:${pathSegment}`;
+  },
+});
+
+/**
  * Pre-configured rate limiter for session endpoints.
  * 30 requests per minute per IP.
  */

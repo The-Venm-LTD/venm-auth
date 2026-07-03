@@ -27,22 +27,14 @@ const VENM_CONFIG = {
   autoRefresh: true,
   oauth: {
     google: {
-      clientId: "960457208933-r40g5t9e6mo0urrij4oigdtse9613u4i.apps.googleusercontent.com",
+      // Set via VITE_GOOGLE_CLIENT_ID env var, or replace with your own
+      clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "your-google-client-id",
     },
     facebook: {
-      appId: "your-facebook-app-id",
+      appId: import.meta.env.VITE_FACEBOOK_APP_ID ?? "your-facebook-app-id",
     },
   },
 };
-
-// ── Toggle options ──────────────────────────────────────────────────
-
-const LAYOUTS: Layout[] = ["vertical", "horizontal", "card", "minimal"];
-
-const PROVIDERS: { id: ProviderType; label: string }[] = [
-  { id: "google", label: "Google" },
-  { id: "facebook", label: "Facebook" },
-];
 
 // ── App Root ─────────────────────────────────────────────────────────
 
@@ -151,7 +143,7 @@ function LoginPage() {
 // ── Dashboard (authenticated) ────────────────────────────────────────
 
 function Dashboard() {
-  const { login, logout, error } = useAuth();
+  const { logout, error } = useAuth();
   const { user, loading: userLoading } = useUser();
   const { accessToken, expiresAt, loading: sessionLoading } = useSession();
   const [loggingOut, setLoggingOut] = useState(false);

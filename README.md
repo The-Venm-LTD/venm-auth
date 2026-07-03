@@ -2,48 +2,68 @@
 
 React authentication SDK for Venm — integrate Google and Facebook OAuth login into any React application with minimal code.
 
-```tsx
-import { VenmProvider, VenmAuth } from "venm-auth";
-
-function App() {
-  return (
-    <VenmProvider
-      config={{
-        apiUrl: "http://localhost:3000/api/auth",
-        environment: "development",
-        oauth: {
-          google: { clientId: "xxx.apps.googleusercontent.com" },
-        },
-      }}
-    >
-      <VenmAuth providers={["google", "facebook"]} />
-    </VenmProvider>
-  );
-}
-```
-
 ## Installation
 
 ```bash
 pnpm add venm-auth
 ```
 
-## Quick Start
-
-Wrap your app with `VenmProvider` and use `VenmAuth` to render login buttons.
+## Client Implementation
 
 ```tsx
-import { VenmProvider, VenmAuth, Authenticated, Unauthenticated, useAuth } from "venm-auth";
+import { VenmProvider, VenmAuth, Authenticated, Unauthenticated, Loading, useAuth } from "venm-auth";
+import type { SDKConfig, ProviderType, Layout } from "venm-auth";
 
-function App() {
+// ── Configuration ───────────────────────────────────────────────────
+
+const config: SDKConfig = {
+  // Base URL of your Express auth server (required)
+  //   Development: "http://localhost:3000/api/auth"
+  //   Production:  "/api/auth"
+  apiUrl: "http://localhost:3000/api/auth",
+
+  // SDK environment
+  //   "development" — enables verbose logging
+  //   "production"  — (default) minimal logging
+  environment: "development",
+
+  // Automatically refresh access tokens before they expire (default: true)
+  autoRefresh: true,
+
+  // Persist session to localStorage (default: true)
+  persistSession: true,
+
+  // Storage mechanism for session persistence (default: "localStorage")
+  //   "localStorage"  — survives tab close
+  //   "sessionStorage" — cleared on tab close
+  storage: "localStorage",
+
+  // HTTP request timeout in milliseconds (default: 10000)
+  timeout: 10000,
+
+  // Custom OAuth redirect URI (default: "{origin}/__venm/auth/callback")
+  redirectUri: "http://localhost:3000/__venm/auth/callback",
+
+  // OAuth provider credentials (required — at least one provider)
+  oauth: {
+    google: {
+      clientId: "your-google-client-id.apps.googleusercontent.com",
+    },
+    facebook: {
+      appId: "your-facebook-app-id",
+    },
+  },
+};
+
+// ── App Root ─────────────────────────────────────────────────────────
+
+export default function App() {
   return (
     <VenmProvider
-      config={{
-        apiUrl: "http://localhost:3000/api/auth",
-        environment: "development",
-        oauth: {
-          google: { clientId: "xxx.apps.googleusercontent.com" },
-        },
+      config={config}
+      // Called whenever auth state changes (login, logout, token refresh)
+      onAuthStateChange={(state) => {
+        console.log("[auth] State:", state);
       }}
     >
       <AppContent />
@@ -51,82 +71,128 @@ function App() {
   );
 }
 
+// ── App Content ──────────────────────────────────────────────────────
+
 function AppContent() {
-  const { user } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <div>
-      <Authenticated>
-        <h1>Welcome, {user?.name}</h1>
-        <LogoutButton />
-      </Authenticated>
+      {/* Shows a loading spinner while the session initializes */}
+      <Loading>
+        <p>Loading session...</p>
+      </Loading>
+
+      {/* Shown when the user is NOT authenticated */}
       <Unauthenticated>
-        <VenmAuth layout="card" />
+        {/* Renders OAuth provider buttons */}
+        {/* layouts: "vertical" | "horizontal" | "card" | "minimal" */}
+        <VenmAuth
+          providers={["google", "facebook"] as ProviderType[]}
+          layout="card"         // (default: "vertical")
+          showDivider={false}   // Show "or" divider between buttons
+        />
       </Unauthenticated>
+
+      {/* Shown when the user IS authenticated */}
+      <Authenticated>
+        <h1>Welcome!</h1>
+        <button onClick={() => logout()}>Sign Out</button>
+      </Authenticated>
     </div>
   );
 }
-
-function LogoutButton() {
-  const { logout } = useAuth();
-  return <button onClick={() => logout()}>Logout</button>;
-}
 ```
 
-### Setting up the Server
-
-venm-auth also ships an **Express server** that handles OAuth token exchange, JWT generation, and session management.
+## Server Implementation
 
 ```tsx
 import express from "express";
 import { createVenmAuth, createMongoDBAdapter } from "venm-auth/server";
+import type { VenmAuthConfig } from "venm-auth/server";
 
 const app = express();
 
-app.use("/api/auth", createVenmAuth({
+// ── Configuration ───────────────────────────────────────────────────
+
+const authConfig: VenmAuthConfig = {
+  // Google OAuth credentials (optional — omit if not using Google)
   google: {
     clientId: process.env.GOOGLE_CLIENT_ID!,
     clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
   },
+
+  // Facebook OAuth credentials (optional — omit if not using Facebook)
+  facebook: {
+    appId: process.env.FACEBOOK_APP_ID!,
+    appSecret: process.env.FACEBOOK_APP_SECRET!,
+  },
+
+  // Secret key for signing JWT tokens (required — min 32 characters)
   jwtSecret: process.env.JWT_SECRET!,
-  database: createMongoDBAdapter({ uri: process.env.MONGODB_URI! }),
-}));
+
+  // Database adapter (required)
+  //   Built-in: createMongoDBAdapter({ uri, databaseName })
+  //   Custom:   implement the DatabaseAdapter interface
+  database: createMongoDBAdapter({
+    uri: process.env.MONGODB_URI!,
+    databaseName: "myapp-auth",
+  }),
+
+  // Session configuration (optional)
+  session: {
+    // Session expiry in seconds (default: 604800 — 7 days)
+    maxAge: 604800,
+  },
+
+  // Route prefix for auth endpoints (default: "/api/auth")
+  prefix: "/api/auth",
+
+  // Restrict token exchange POST requests to trusted origins
+  // (optional — but recommended in production)
+  allowedOrigins: ["http://localhost:3000"],
+};
+
+// ── Mount ────────────────────────────────────────────────────────────
+
+app.use("/api/auth", createVenmAuth(authConfig));
 
 app.listen(3000);
 ```
 
-See the [demo app](./examples/venm-auth-demo) for a complete working example including an in-memory adapter for local development.
+## OAuth Flow
 
-## Client Configuration
+1. User clicks a provider button (Google/Facebook)
+2. A popup opens to your Express server's OAuth authorize endpoint (`GET /google?state=...&code_challenge=...&auth_session_id=...`)
+3. The server sets a signed CSRF state cookie, stores a state-to-session mapping, and redirects to the provider's consent screen
+4. The user authenticates with the chosen provider
+5. The provider redirects back to your server's callback endpoint (`GET /google/callback`)
+6. The server validates the state cookie against the returned state parameter, then **stores the authorization code server-side** keyed by the `auth_session_id` (see [COOP Handling](#cross-origin-opener-policy-coop-handling) below)
+7. The main page polls `GET /result/:authSessionId` every 2 seconds until the code is available
+8. The popup closes; the SDK exchanges the code for tokens via `POST /google`
+9. The server exchanges the code with the provider, creates/updates the user in the database, generates JWT tokens, and stores the session
+10. The user and session are stored in React state and localStorage
+11. The `onAuthStateChange` callback fires with the new auth state
 
-| Option | Type | Default | Description |
-|--------|------|---------|-------------|
-| `apiUrl` | `string` | `http://localhost:3000/api/auth` (dev) / `/api/auth` (prod) | Base URL of your Express auth server |
-| `environment` | `"production" \| "development"` | `"production"` | Enables verbose logging in development |
-| `autoRefresh` | `boolean` | `true` | Automatically refresh tokens before expiry |
-| `persistSession` | `boolean` | `true` | Persist session to localStorage |
-| `storage` | `"localStorage" \| "sessionStorage"` | `"localStorage"` | Storage mechanism for session persistence |
-| `timeout` | `number` | `10000` | HTTP request timeout in milliseconds |
-| `redirectUri` | `string` | `"{origin}/__venm/auth/callback"` | Custom OAuth redirect URI |
-| `oauth` | `OAuthConfig` | — | OAuth provider credentials |
+> **Why server-side storage?** Some OAuth providers (notably Google) set `Cross-Origin-Opener-Policy: same-origin` on their consent pages, which severs the `window.opener` reference in the popup — making `postMessage` silently fail. Instead, the callback stores the OAuth result on the server, and the main page polls `GET /result/:authSessionId` to retrieve it. See the [COOP section](#cross-origin-opener-policy-coop-handling) for details.
 
-### OAuthConfig
+## Server API Endpoints
 
-| Option | Type | Description |
+| Method | Path | Description |
 |--------|------|-------------|
-| `google.clientId` | `string` | Google OAuth client ID |
-| `facebook.appId` | `string` | Facebook OAuth app ID |
-
-## Server Configuration
-
-| Option | Type | Description |
-|--------|------|-------------|
-| `google` | `GoogleOAuthConfig` | Google OAuth credentials (`clientId`, `clientSecret`) |
-| `facebook` | `FacebookOAuthConfig` | Facebook OAuth credentials (`appId`, `appSecret`) |
-| `jwtSecret` | `string` | **Required.** Secret key for signing JWT tokens |
-| `database` | `DatabaseAdapter` | **Required.** Database adapter (MongoDB or in-memory) |
-| `session` | `SessionConfig` | Session configuration (optional) |
-| `prefix` | `string` | `"/api/auth"` | Route prefix for auth endpoints |
+| `GET` | `/google` | Initiate Google OAuth redirect (sets CSRF cookie) |
+| `GET` | `/google/callback` | Google OAuth callback (validates CSRF cookie, stores result server-side) |
+| `POST` | `/google` | Exchange Google auth code for JWT tokens |
+| `GET` | `/facebook` | Initiate Facebook OAuth redirect (sets CSRF cookie) |
+| `GET` | `/facebook/callback` | Facebook OAuth callback (validates CSRF cookie, stores result server-side) |
+| `POST` | `/facebook` | Exchange Facebook auth code for JWT tokens |
+| `GET` | `/result/:authSessionId` | Poll for OAuth auth result (bypasses COOP-broken postMessage) |
+| `GET` | `/session` | Verify and return current session (requires Bearer token) |
+| `POST` | `/refresh` | Refresh access token using refresh token |
+| `GET` | `/user` | Return current user (requires Bearer token) |
+| `POST` | `/logout` | Destroy current session |
+| `POST` | `/logout/all` | Destroy all sessions for the user |
+| `GET` | `/health` | Health check |
 
 ## Components
 
@@ -134,14 +200,10 @@ See the [demo app](./examples/venm-auth-demo) for a complete working example inc
 
 The root component. Must wrap all authentication-using code.
 
-```tsx
-<VenmProvider
-  config={{ apiUrl: "http://localhost:3000/api/auth", environment: "development" }}
-  onAuthStateChange={(state) => console.log("Auth state:", state)}
->
-  <App />
-</VenmProvider>
-```
+| Prop | Type | Default | Description |
+|------|------|---------|-------------|
+| `config` | `SDKConfig` | — | SDK configuration (apiUrl, oauth, environment, etc.) |
+| `onAuthStateChange` | `(state: AuthState) => void` | — | Called when auth state changes |
 
 ### VenmAuth
 
@@ -164,7 +226,7 @@ Standalone provider buttons.
 | `loading` | `boolean` | `false` | Show loading spinner |
 | `children` | `ReactNode` | — | Custom button label |
 
-### Authenticated / Unauthenticated
+### Authenticated / Unauthenticated / Loading
 
 Conditional rendering components.
 
@@ -176,11 +238,11 @@ Conditional rendering components.
 <Unauthenticated>
   <LoginPage />
 </Unauthenticated>
+
+<Loading>
+  <p>Loading...</p>
+</Loading>
 ```
-
-### Loading
-
-Shows a loading indicator while the session initializes.
 
 ## Hooks
 
@@ -192,44 +254,74 @@ Shows a loading indicator while the session initializes.
 | `useLogin()` | `{ login, loading, error }` | Login method with loading state |
 | `useLogout()` | `{ logout, loading }` | Logout method with loading state |
 
-## OAuth Flow
+## Cross-Origin-Opener-Policy (COOP) Handling
 
-1. User clicks a provider button (Google/Facebook)
-2. A popup opens to your Express server's OAuth authorize endpoint (`GET /google?state=...&code_challenge=...`)
-3. The server sets a signed CSRF state cookie and redirects to the provider's consent screen
-4. The user authenticates with the chosen provider
-5. The provider redirects back to your server's callback endpoint (`GET /google/callback`)
-6. The server validates the state cookie against the returned state parameter, then sends the authorization code back to the popup via `postMessage`
-7. The popup closes; the SDK exchanges the code for tokens via `POST /google`
-8. The server exchanges the code with the provider, creates/updates the user in the database, generates JWT tokens, and stores the session
-9. The user and session are stored in React state and localStorage
-10. The `onAuthStateChange` callback fires with the new auth state
+### The Problem
 
-## Server API Endpoints
+Google's OAuth consent screen sets the `Cross-Origin-Opener-Policy: same-origin` HTTP header on its pages. This severs the `window.opener` reference in the popup, so `window.opener.postMessage()` silently fails — the popup closes but the main page never receives the auth code.
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/google` | Initiate Google OAuth redirect (sets CSRF cookie) |
-| `GET` | `/google/callback` | Google OAuth callback (validates CSRF cookie, returns code via postMessage) |
-| `POST` | `/google` | Exchange Google auth code for JWT tokens |
-| `GET` | `/facebook` | Initiate Facebook OAuth redirect (sets CSRF cookie) |
-| `GET` | `/facebook/callback` | Facebook OAuth callback (validates CSRF cookie, returns code via postMessage) |
-| `POST` | `/facebook` | Exchange Facebook auth code for JWT tokens |
-| `GET` | `/session` | Verify and return current session (requires Bearer token) |
-| `POST` | `/refresh` | Refresh access token using refresh token |
-| `GET` | `/user` | Return current user (requires Bearer token) |
-| `POST` | `/logout` | Destroy current session |
-| `POST` | `/logout/all` | Destroy all sessions for the user |
-| `GET` | `/health` | Health check |
+> Facebook does not set COOP headers, so `postMessage` works for Facebook logins. The fallback handles both cases transparently.
+
+### The Solution: Server-Side Result Relay
+
+The SDK uses a **dual-delivery mechanism**:
+
+1. **Fast path (`postMessage`)** — The callback HTML always attempts `window.opener.postMessage()`. Resolves instantly when it works (e.g., Facebook).
+2. **Fallback path (polling)** — In parallel, the client polls `GET /result/:authSessionId` every **2 seconds** to retrieve the OAuth result. Ensures the flow works even when COOP severs the opener.
+
+Whichever path resolves first wins.
+
+### Architecture
+
+```
+ Main Page                  Express Auth Server
+    │                              │
+    ├── 1. Open popup + auth_session_id ──▶  │
+    │                              │
+    ├── 2. Poll GET /result/:id ──▶  │
+    │    (every 2s, returns        │
+    │     { status: "PENDING" })   │
+    │ ◀────────────────────────────┤
+    │                              │
+    │           ┌──────────────┐   │
+    │           │   Google     │   │
+    │           │   Consent    │───┼── 3. POST /google/callback ──▶ storeResult(state, code)
+    │           │   Screen     │   │
+    │           └──────────────┘   │
+    │                              │
+    ├── 4. Next poll: { code, state } ◀─┤
+    │                              │
+    ├── 5. POST /google (exchange) ──▶  │
+    │                              │
+```
+
+### The `OauthResultStore`
+
+An in-memory store that maps OAuth `state` parameters to client-generated `authSessionId` values:
+
+| Step | Action | Description |
+|------|--------|-------------|
+| Authorization request | `setStateMapping(state, authSessionId)` | Stores `state → authSessionId` |
+| OAuth callback | `storeResult(state, code)` | Looks up `authSessionId` from `state`, stores result |
+| Client polling | `getResult(authSessionId)` | Returns result and **deletes it** (one-time retrieval) |
+| Error callback | `storeError(state, errorMessage)` | Stores error so the client receives it promptly |
+
+- **TTL**: Results expire after **5 minutes** (cleanup runs every 60 seconds)
+- **One-time retrieval**: Once read, the result is immediately deleted
+- **No console noise**: Returns `200 { status: "PENDING" }` while waiting (not 404)
+
+### Rate Limiting
+
+Dedicated `resultRateLimiter` — **30 requests per minute per `authSessionId`** (compared to 10/min for other OAuth endpoints), matching the 2-second polling interval.
 
 ## Security
 
 - **PKCE** (Proof Key for Code Exchange) for Google OAuth — protects against authorization code interception
-- **Cookie-based CSRF state** — state parameter is stored in a signed, httpOnly, short-lived cookie on the redirect; validated against the returned state on callback
+- **Cookie-based CSRF state** — state parameter stored in a signed, httpOnly, short-lived cookie; validated on callback
+- **Server-side result storage** — auth codes stored in memory with 5-minute TTL; retrieved once and immediately deleted
 - **Popup origin validation** — only accepts messages from the expected origin
 - **Token refresh margin** — refreshes tokens 60 seconds before expiry
-- **Rate limiting** — built-in rate limiters for OAuth and session endpoints
-- **No external storage of secrets** — tokens stored in localStorage, accessible only on the same origin
+- **Rate limiting** — built-in limiters for OAuth (10/min), result polling (30/min), and session (30/min) endpoints
 
 ## Local Development
 
@@ -255,32 +347,18 @@ Supported localhost origins:
 - `http://localhost:5173`
 - `http://localhost:4173`
 
-Use `environment: "development"` in your config for verbose logging:
-
-```tsx
-<VenmProvider
-  config={{
-    apiUrl: "http://localhost:3000/api/auth",
-    environment: "development",
-  }}
->
-  <App />
-</VenmProvider>
-```
-
 You can also run the included demo app:
 
 ```bash
 cd examples/venm-auth-demo
-cp server/.env.example server/.env
-# Fill in your OAuth credentials in .env
+# Create a .env file with your OAuth credentials
 pnpm install
 pnpm dev
 ```
 
 ## Error Handling
 
-The SDK provides typed errors with codes:
+Client-side error codes:
 
 | Code | Description |
 |------|-------------|
@@ -293,7 +371,7 @@ The SDK provides typed errors with codes:
 | `TIMEOUT` | HTTP request timed out |
 | `NO_REFRESH_TOKEN` | No refresh token available for session refresh |
 
-Server-side error codes (returned as JSON):
+Server-side error codes:
 
 | Code | Description |
 |------|-------------|
@@ -311,8 +389,6 @@ Server-side error codes (returned as JSON):
 
 ## TypeScript
 
-All types are exported for use in your application:
-
 ```tsx
 import type { User, Session, AuthState, ProviderType, SDKConfig, OAuthConfig } from "venm-auth";
 import type { DatabaseAdapter, ServerSession, VenmAuthConfig } from "venm-auth/server";
@@ -329,7 +405,7 @@ import type { DatabaseAdapter, ServerSession, VenmAuthConfig } from "venm-auth/s
 
 ## Database Adapters
 
-venm-auth ships with a MongoDB adapter:
+Built-in MongoDB adapter:
 
 ```ts
 import { createMongoDBAdapter } from "venm-auth/server";
@@ -341,5 +417,7 @@ const db = createMongoDBAdapter({
 ```
 
 You can also implement the `DatabaseAdapter` interface for any database (PostgreSQL, SQLite, Redis, etc.).
+
+---
 
 License: MIT
