@@ -8,6 +8,7 @@ import { createGoogleRoutes } from "./routes/google";
 import { createFacebookRoutes } from "./routes/facebook";
 import { createResultRoutes } from "./routes/result";
 import { createSessionRoutes } from "./routes/session";
+import { createRefreshRoutes } from "./routes/refresh";
 import { createUserRoutes } from "./routes/user";
 import { createLogoutRoutes } from "./routes/logout";
 import { createHealthRoutes } from "./routes/health";
@@ -108,6 +109,9 @@ export function createVenmAuth(config: VenmAuthConfig): Router {
 
   // ── OAuth Result Retrieval (polled by client to bypass COOP) ──
   router.use("/result", resultRateLimiter, createResultRoutes(oauthResultStore));
+
+  // ── Refresh Token Route ───────────────────────────────────────
+  router.use("/refresh", sessionRateLimiter, createRefreshRoutes(jwtSecret, db));
 
   // ── Session & User Routes ─────────────────────────────────────
   router.use("/session", sessionRateLimiter, createSessionRoutes(jwtSecret, db));

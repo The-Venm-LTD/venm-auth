@@ -35,7 +35,7 @@ export function createGoogleRoutes(
    */
   router.get("/", stateCookieMiddleware.issue, (req: Request, res: Response) => {
     console.log(`[venm-auth] Google OAuth: initiating redirect, state=${req.query.state ? "present" : "missing"}, code_challenge=${req.query.code_challenge ? "present" : "missing"}`);
-    const { state, code_challenge, redirect_uri, auth_session_id } = req.query;
+    const { state, code_challenge, redirect_uri, auth_session_id, offline } = req.query;
 
     // Store authSessionId mapping so the callback can look it up from the state
     if (oauthResultStore && state && auth_session_id) {
@@ -51,9 +51,13 @@ export function createGoogleRoutes(
       redirect_uri: callbackUri,
       response_type: "code",
       scope: "openid email profile",
-      access_type: "offline",
-      prompt: "consent",
     });
+
+    // Request offline access (refresh token) unless explicitly opted out
+    const shouldRequestOffline = offline !== "false";
+    if (shouldRequestOffline) {
+      params.set("access_type", "offline");
+    }
 
     if (state) params.set("state", state as string);
     if (code_challenge) {

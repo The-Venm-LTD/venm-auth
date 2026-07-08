@@ -28,6 +28,11 @@ export function buildAuthorizationUrl(config: {
   scopes?: string[];
   redirectUri?: string;
   authSessionId?: string;
+  /**
+   * Whether to request offline access (refresh token) from the provider.
+   * Defaults to true on the server side when not provided.
+   */
+  offline?: boolean;
 }): string {
   const endpoint =
     config.provider === "google"
@@ -53,6 +58,10 @@ export function buildAuthorizationUrl(config: {
 
   if (config.authSessionId) {
     url.searchParams.set("auth_session_id", config.authSessionId);
+  }
+
+  if (config.offline !== undefined) {
+    url.searchParams.set("offline", String(config.offline));
   }
 
   return url.toString();

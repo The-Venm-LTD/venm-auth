@@ -142,7 +142,7 @@ describe("Google OAuth Routes", () => {
   });
 
   describe("GET /", () => {
-    it("should redirect to Google's consent screen with correct params", async () => {
+    it("should redirect to Google's consent screen with offline access by default", async () => {
       const req = createMockReq({
         query: {
           state: "mock-state-token",
@@ -171,10 +171,35 @@ describe("Google OAuth Routes", () => {
       expect(redirectUrl).toContain("response_type=code");
       expect(redirectUrl).toContain("scope=openid+email+profile");
       expect(redirectUrl).toContain("access_type=offline");
-      expect(redirectUrl).toContain("prompt=consent");
+      expect(redirectUrl).not.toContain("prompt");
       expect(redirectUrl).toContain("state=mock-state-token");
       expect(redirectUrl).toContain("code_challenge=mock-challenge-hash");
       expect(redirectUrl).toContain("code_challenge_method=S256");
+    });
+
+    it("should omit access_type=offline when offline=false", async () => {
+      const req = createMockReq({
+        query: {
+          state: "mock-state-token",
+          code_challenge: "mock-challenge-hash",
+          offline: "false",
+        },
+      });
+      const res = createMockRes();
+      const next = vi.fn();
+
+      const route = findRoute(routes, "get", "/");
+      expect(route).toBeDefined();
+
+      for (const layer of route.route.stack) {
+        if (typeof layer.handle === "function") {
+          await layer.handle(req, res, next);
+        }
+      }
+
+      expect(res.redirect).toHaveBeenCalled();
+      const redirectUrl = res.state.redirectUrl;
+      expect(redirectUrl).not.toContain("access_type");
     });
 
     it("should redirect without code_challenge when not provided", async () => {

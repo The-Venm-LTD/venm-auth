@@ -23,6 +23,9 @@ export { exchangeFacebookCode, fetchFacebookProfile, handleFacebookCallback } fr
 export { createVenmAuth } from "./createVenmAuth";
 export type { VenmAuthConfig } from "./createVenmAuth";
 
+// ── Refresh Token Routes ───────────────────────────────────────────
+export { createRefreshRoutes } from "./routes/refresh";
+
 // ── Error Handler ──────────────────────────────────────────────────
 export { VenmAuthError, errorHandler } from "./middleware/error-handler";
 

@@ -39,6 +39,7 @@ export class GoogleOAuthProvider implements OAuthProvider {
       codeChallenge: challenge,
       scopes: ["openid", "email", "profile"],
       authSessionId,
+      offline: true,
     });
 
     const result = await popupManager.open(authUrl, { authSessionId });

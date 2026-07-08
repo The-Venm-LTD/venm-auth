@@ -1,6 +1,6 @@
 {
   "name": "venm-auth",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": false,
   "description": "React authentication SDK for Venm — OAuth, session management, React hooks & components",
   "license": "MIT",

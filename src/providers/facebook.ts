@@ -38,6 +38,7 @@ export class FacebookOAuthProvider implements OAuthProvider {
       state,
       scopes: ["email", "public_profile"],
       authSessionId,
+      offline: true,
     });
 
     const result = await popupManager.open(authUrl, { authSessionId });
