@@ -13,12 +13,25 @@ export class SessionService {
   private logger: ReturnType<typeof createLogger>;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
   private config: SDKConfig;
+  private onRefreshFailed: (() => void) | null;
+  /**
+   * Guards against concurrent refresh calls.
+   * When a refresh is already in-flight, subsequent callers share the same
+   * pending promise instead of racing and potentially corrupting each other's
+   * token rotation (e.g., StrictMode double-init in React 18 development).
+   */
+  private refreshPromise: Promise<Session> | null = null;
 
-  constructor(config: SDKConfig, authService: AuthService) {
+  constructor(
+    config: SDKConfig,
+    authService: AuthService,
+    onRefreshFailed?: () => void
+  ) {
     this.config = config;
     this.authService = authService;
     this.storage = createStorage(config.storage);
     this.logger = createLogger(config.environment ?? "production");
+    this.onRefreshFailed = onRefreshFailed ?? null;
   }
 
   async initialize(): Promise<{
@@ -80,6 +93,21 @@ export class SessionService {
   }
 
   async refreshSession(): Promise<Session> {
+    // If a refresh is already in-flight, return the existing promise so
+    // concurrent callers (e.g. StrictMode double-mount) share the same
+    // result instead of racing and corrupting the token rotation.
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = this.executeRefresh().finally(() => {
+      this.refreshPromise = null;
+    });
+
+    return this.refreshPromise;
+  }
+
+  private async executeRefresh(): Promise<Session> {
     const session = this.storage.getSession();
     if (!session?.refreshToken) {
       throw {
@@ -131,7 +159,7 @@ export class SessionService {
         this.logger.debug("Token refreshed successfully");
       } catch (error) {
         this.logger.error("Auto-refresh failed:", error);
-        // The provider/context layer will handle the unauthenticated state
+        this.onRefreshFailed?.();
       }
     }, delay);
   }

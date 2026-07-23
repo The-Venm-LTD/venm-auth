@@ -106,14 +106,41 @@ export function AuthProvider({
     const getSession = () => stateRef.current.session;
     const authService = new AuthService(resolvedConfig, getSession);
     const popupManager = new PopupManager(resolvedConfig);
-    const sessionService = new SessionService(resolvedConfig, authService);
+    const sessionService = new SessionService(
+      resolvedConfig,
+      authService,
+      () => {
+        sessionService.clearSession();
+        dispatch({
+          type: "UNAUTHENTICATED",
+          payload: {
+            error: {
+              code: "SESSION_EXPIRED",
+              message: "Auto-refresh failed — session expired",
+            },
+          },
+        });
+      }
+    );
 
     services.current = { authService, popupManager, sessionService };
   }
 
   // ── Initialize session on mount ─────────────────────────────────
+  //
+  // In React 18 StrictMode (development), the effect fires twice.
+  // Without a guard, two parallel initialize() calls race to refresh
+  // with the same refresh token — the first rotates tokens on the server,
+  // the second fails with SESSION_NOT_FOUND, then clears localStorage
+  // and logs the user out. The "cancelled" flag below ensures stale
+  // callbacks from a previous invocation are ignored.
+  //
+  // The concurrency guard in SessionService.refreshSession() ensures
+  // duplicate calls share the same in-flight promise, but the cancelled
+  // flag prevents stale dispatches after a re-mount.
 
   useEffect(() => {
+    let cancelled = false;
     const { sessionService } = services.current!;
 
     dispatch({ type: "INIT" });
@@ -121,6 +148,7 @@ export function AuthProvider({
     sessionService
       .initialize()
       .then(({ session, user }) => {
+        if (cancelled) return;
         if (session && user) {
           dispatch({ type: "AUTHENTICATED", payload: { user, session } });
         } else {
@@ -128,6 +156,7 @@ export function AuthProvider({
         }
       })
       .catch((error) => {
+        if (cancelled) return;
         logger.error("Session initialization failed:", error);
         dispatch({
           type: "UNAUTHENTICATED",
@@ -142,6 +171,10 @@ export function AuthProvider({
           },
         });
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Notify on auth state change ──────────────────────────────────

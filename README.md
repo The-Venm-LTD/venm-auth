@@ -2,11 +2,92 @@
 
 React authentication SDK for Venm — integrate Google and Facebook OAuth login into any React application with minimal code.
 
+## What's New
+
+### 🛡️ React 18 StrictMode Safety
+
+Session initialization now uses a **cancellation flag** to safely handle React 18 StrictMode's double-mount behavior in development. Previously, two parallel `initialize()` calls could race — the first would rotate tokens on the server, the second would fail with `SESSION_NOT_FOUND`, clear localStorage, and log the user out. The cancellation flag ensures stale callbacks from unmounted effects are ignored.
+
+### 🔁 Concurrent Refresh Guard
+
+`SessionService.refreshSession()` now returns the same in-flight promise for all concurrent callers. Whether triggered by StrictMode double-mount or rapid manual refreshes, duplicate calls share a single promise instead of racing and corrupting token rotation.
+
+### ⏰ Session Expiry Callback
+
+When auto-refresh fails (e.g., expired refresh token), the SDK now fires an **`onRefreshFailed`** callback that:
+- Clears the session from localStorage
+- Dispatches `UNAUTHENTICATED` with a `SESSION_EXPIRED` error code
+- Provides a clean path for redirecting users back to the login screen
+
+### ⚡ Extended Token Refresh Margin
+
+The auto-refresh margin has been increased from **60 seconds → 120 seconds** before token expiry, giving more headroom for network latency and server-side token rotation.
+
+### 🗄️ Refresh Token Expiry in Database
+
+Added `refreshExpiresAt` field to the `ServerSession` and `CreateSessionData` types. The MongoDB adapter now stores this field, enabling **native TTL index cleanup** of expired refresh tokens. The server also supports passing `accessTokenExpiresIn` and `refreshTokenExpiresIn` through the session config to override default token lifetimes.
+
+### 🐛 Bug Fixes
+
+- **Memory adapter token rotation:** Fixed the demo server's memory adapter to properly clean up old token keys when tokens are rotated during refresh. Previously, stale keys would accumulate and shadow updated sessions.
+- **Cleaner dev experience:** The demo app now includes an auth event log, live access token countdown, manual refresh button, provider/layout toggles, and improved profile badges.
+
+---
+
 ## Installation
 
+> **👋 Quick start:** `pnpm add venm-auth` — React 18+, Node.js 18+ required.
+
+### Prerequisites
+
+| Requirement | Version |
+|-------------|---------|
+| **Node.js** | `>= 18` |
+| **React** | `^18.2.0` (peer dependency) |
+| **React DOM** | `^18.2.0` (peer dependency) |
+
+### Client-side
+
 ```bash
+# pnpm (recommended)
 pnpm add venm-auth
+
+# npm
+npm install venm-auth
+
+# yarn
+yarn add venm-auth
 ```
+
+### Server-side (Express)
+
+The server package is bundled within `venm-auth` — no additional install needed.
+
+```typescript
+import { createVenmAuth, createMongoDBAdapter } from "venm-auth/server";
+```
+
+### Environment Variables
+
+Create a `.env` file in your server project:
+
+```env
+# Google OAuth
+GOOGLE_CLIENT_ID=your-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-client-secret
+
+# Facebook OAuth
+FACEBOOK_APP_ID=your-app-id
+FACEBOOK_APP_SECRET=your-app-secret
+
+# JWT signing key (min 32 characters)
+JWT_SECRET=your-256-bit-secret-key-change-me
+
+# MongoDB (if using the built-in adapter)
+MONGODB_URI=mongodb://localhost:27017/myapp
+```
+
+> **💡 Tip:** The JWT secret must be **at least 32 characters** long. You can generate one with `openssl rand -base64 32`.
 
 ## Client Implementation
 
@@ -141,8 +222,10 @@ const authConfig: VenmAuthConfig = {
 
   // Session configuration (optional)
   session: {
-    // Session expiry in seconds (default: 604800 — 7 days)
-    maxAge: 604800,
+    // Access token lifetime (default: "15m")
+    accessTokenExpiresIn: "15m",
+    // Refresh token lifetime (default: "30d")
+    refreshTokenExpiresIn: "30d",
   },
 
   // Route prefix for auth endpoints (default: "/api/auth")
@@ -370,6 +453,7 @@ Client-side error codes:
 | `UNAUTHORIZED` | Invalid or expired token |
 | `TIMEOUT` | HTTP request timed out |
 | `NO_REFRESH_TOKEN` | No refresh token available for session refresh |
+| `SESSION_EXPIRED` | Auto-refresh failed — session expired and has been cleared |
 
 Server-side error codes:
 
@@ -405,7 +489,7 @@ import type { DatabaseAdapter, ServerSession, VenmAuthConfig } from "venm-auth/s
 
 ## Database Adapters
 
-Built-in MongoDB adapter:
+### MongoDB (built-in)
 
 ```ts
 import { createMongoDBAdapter } from "venm-auth/server";
@@ -416,7 +500,27 @@ const db = createMongoDBAdapter({
 });
 ```
 
-You can also implement the `DatabaseAdapter` interface for any database (PostgreSQL, SQLite, Redis, etc.).
+The adapter creates a **TTL index** on `refreshExpiresAt` so expired sessions are automatically cleaned up by MongoDB. The access token expiry (`expiresAt`) is not TTL-indexed — sessions remain valid until the refresh token expires, allowing auto-refresh to revive them.
+
+### Custom Adapters
+
+Implement the `DatabaseAdapter` interface for PostgreSQL, SQLite, Redis, etc.:
+
+```ts
+import type { DatabaseAdapter, CreateSessionData } from "venm-auth/server";
+
+const myAdapter: DatabaseAdapter = {
+  async createSession(data: CreateSessionData) {
+    // data includes:
+    //   accessToken, refreshToken, expiresAt,
+    //   refreshExpiresAt  ← absolute timestamp for cleanup
+    // ...
+  },
+  // ... implement all required methods
+};
+```
+
+> **Note:** The `refreshExpiresAt` field was added in v1.2.0 — custom adapters must include it in `CreateSessionData` for proper session cleanup.
 
 ---
 

@@ -16,11 +16,7 @@
     "forceConsistentCasingInFileNames": true,
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
-    "exactOptionalPropertyTypes": false,
-    "baseUrl": ".",
-    "paths": {
-      "@/*": ["./src/*"]
-    }
+    "exactOptionalPropertyTypes": false
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist", "coverage"]

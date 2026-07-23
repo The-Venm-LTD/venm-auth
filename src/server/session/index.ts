@@ -3,8 +3,10 @@ import type { DatabaseAdapter, ServerSession } from "../database/adapter";
 // ── Session Config ──────────────────────────────────────────────────
 
 export interface SessionConfig {
-  /** How long until the refresh token expires. Default: "30d". */
-  expiresIn?: string;
+  /** How long until the access token expires (e.g. "15m", "30m", "1h"). Default: "15m". */
+  accessTokenExpiresIn?: string;
+  /** How long until the refresh token expires (e.g. "7d", "30d"). Default: "30d". */
+  refreshTokenExpiresIn?: string;
 }
 
 // ── Server Session Service ─────────────────────────────────────────
@@ -24,6 +26,7 @@ export class SessionManager {
     accessToken: string;
     refreshToken: string;
     expiresAt: number;
+    refreshExpiresAt: number;
   }): Promise<ServerSession> {
     return this.adapter.createSession(data);
   }
@@ -65,6 +68,7 @@ export class SessionManager {
       accessToken?: string;
       refreshToken?: string;
       expiresAt?: number;
+      refreshExpiresAt?: number;
     }
   ): Promise<ServerSession | null> {
     return this.adapter.updateSession(token, data);

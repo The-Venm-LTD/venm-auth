@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import type { DatabaseAdapter, CreateUserData } from "../database/adapter";
 import type { FacebookOAuthConfig } from "../oauth/facebook";
 import { handleFacebookCallback } from "../oauth/facebook";
-import { generateTokens } from "../jwt/generate";
+import { generateTokens, type TokenExpiryOptions } from "../jwt/generate";
 import { stateCookieMiddleware } from "../middleware/csrf";
 import { callbackHtml } from "../utils/callback-html";
 import type { OauthResultStore } from "../store/oauth-result-store";
@@ -18,7 +18,8 @@ export function createFacebookRoutes(
   jwtSecret: string,
   db: DatabaseAdapter,
   prefix: string = "/api/auth",
-  oauthResultStore?: OauthResultStore
+  oauthResultStore?: OauthResultStore,
+  tokenExpiry?: TokenExpiryOptions
 ): Router {
   const router = Router();
 
@@ -175,9 +176,9 @@ export function createFacebookRoutes(
         return;
       }
 
-      // Generate JWT tokens
+      // Generate JWT tokens (using configured expiry, or defaults)
       const tokenPayload = { sub: user.id, email: user.email, provider: user.provider };
-      const jwtTokens = await generateTokens(tokenPayload, jwtSecret);
+      const jwtTokens = await generateTokens(tokenPayload, jwtSecret, tokenExpiry);
 
       console.log(`[venm-auth] Facebook OAuth: tokens generated, session will expire at ${new Date(jwtTokens.expiresAt).toISOString()}`);
 
@@ -187,6 +188,7 @@ export function createFacebookRoutes(
         accessToken: jwtTokens.accessToken,
         refreshToken: jwtTokens.refreshToken,
         expiresAt: jwtTokens.expiresAt,
+        refreshExpiresAt: jwtTokens.refreshExpiresAt,
       });
 
       console.log(`[venm-auth] Facebook OAuth: success for user ${user.id}`);

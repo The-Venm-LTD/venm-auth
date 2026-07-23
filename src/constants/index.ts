@@ -10,7 +10,7 @@ export const DEFAULT_BASE_URLS = {
 export const DEFAULT_TIMEOUT = 10_000;
 export const DEFAULT_POPUP_WIDTH = 600;
 export const DEFAULT_POPUP_HEIGHT = 700;
-export const TOKEN_REFRESH_MARGIN_MS = 60_000;
+export const TOKEN_REFRESH_MARGIN_MS = 120_000;
 export const POPUP_TIMEOUT_MS = 300_000;
 
 export const STORAGE_KEY_SESSION = "venm_auth_session";

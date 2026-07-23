@@ -58,6 +58,7 @@ const createSessionData: CreateSessionData = {
   accessToken: "at-mock-token",
   refreshToken: "rt-mock-token",
   expiresAt: Date.now() + 15 * 60 * 1000,
+  refreshExpiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
 };
 
 const mockUserDoc = {
@@ -74,6 +75,7 @@ const mockSessionDoc = {
   accessToken: createSessionData.accessToken,
   refreshToken: createSessionData.refreshToken,
   expiresAt: createSessionData.expiresAt,
+  refreshExpiresAt: createSessionData.refreshExpiresAt,
   createdAt: "2024-01-01T00:00:00Z",
   updatedAt: "2024-01-01T00:00:00Z",
 };

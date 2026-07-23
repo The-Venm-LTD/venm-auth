@@ -98,20 +98,28 @@ export function createVenmAuth(config: VenmAuthConfig): Router {
   const oauthResultStore = new OauthResultStore();
   oauthResultStore.startCleanup();
 
+  // Derive token expiry options from session config (if provided)
+  const tokenExpiry = config.session
+    ? {
+        accessTokenExpiresIn: config.session.accessTokenExpiresIn,
+        refreshTokenExpiresIn: config.session.refreshTokenExpiresIn,
+      }
+    : undefined;
+
   // ── OAuth Routes ──────────────────────────────────────────────
   if (google) {
-    router.use("/google", oauthRateLimiter, csrfProtection(config.allowedOrigins), createGoogleRoutes(google, jwtSecret, db, config.prefix, oauthResultStore));
+    router.use("/google", oauthRateLimiter, csrfProtection(config.allowedOrigins), createGoogleRoutes(google, jwtSecret, db, config.prefix, oauthResultStore, tokenExpiry));
   }
 
   if (facebook) {
-    router.use("/facebook", oauthRateLimiter, csrfProtection(config.allowedOrigins), createFacebookRoutes(facebook, jwtSecret, db, config.prefix, oauthResultStore));
+    router.use("/facebook", oauthRateLimiter, csrfProtection(config.allowedOrigins), createFacebookRoutes(facebook, jwtSecret, db, config.prefix, oauthResultStore, tokenExpiry));
   }
 
   // ── OAuth Result Retrieval (polled by client to bypass COOP) ──
   router.use("/result", resultRateLimiter, createResultRoutes(oauthResultStore));
 
   // ── Refresh Token Route ───────────────────────────────────────
-  router.use("/refresh", sessionRateLimiter, createRefreshRoutes(jwtSecret, db));
+  router.use("/refresh", sessionRateLimiter, createRefreshRoutes(jwtSecret, db, tokenExpiry));
 
   // ── Session & User Routes ─────────────────────────────────────
   router.use("/session", sessionRateLimiter, createSessionRoutes(jwtSecret, db));

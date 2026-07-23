@@ -20,6 +20,7 @@ vi.mock("../jwt/generate", () => ({
     accessToken: "jwt-access-token",
     refreshToken: "jwt-refresh-token",
     expiresAt: Date.now() + 15 * 60 * 1000,
+    refreshExpiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
   }),
 }));
 
@@ -48,6 +49,7 @@ function createMockDb(): DatabaseAdapter {
       accessToken: "jwt-access-token",
       refreshToken: "jwt-refresh-token",
       expiresAt: Date.now() + 15 * 60 * 1000,
+      refreshExpiresAt: Date.now() + 30 * 24 * 60 * 60 * 1000,
       createdAt: "2024-01-01T00:00:00Z",
       updatedAt: "2024-01-01T00:00:00Z",
     }),

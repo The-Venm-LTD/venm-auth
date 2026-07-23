@@ -28,6 +28,7 @@ interface SessionDocument extends Document {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  refreshExpiresAt: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -112,8 +113,12 @@ export function createMongoDBAdapter(
         { refreshToken: 1 },
         { unique: true }
       );
+      // TTL index on refreshExpiresAt so the session document lives as
+      // long as the refresh token is valid — NOT on expiresAt (access
+      // token lifetime), which would prematurely delete sessions before
+      // the refresh token can be used to revive them.
       await sessionsCollection.createIndex(
-        { expiresAt: 1 },
+        { refreshExpiresAt: 1 },
         { expireAfterSeconds: 0 }
       );
     }
@@ -144,6 +149,7 @@ export function createMongoDBAdapter(
       accessToken: doc.accessToken,
       refreshToken: doc.refreshToken,
       expiresAt: doc.expiresAt,
+      refreshExpiresAt: doc.refreshExpiresAt,
       createdAt: doc.createdAt,
       updatedAt: doc.updatedAt,
     };
@@ -227,6 +233,7 @@ export function createMongoDBAdapter(
         accessToken: data.accessToken,
         refreshToken: data.refreshToken,
         expiresAt: data.expiresAt,
+        refreshExpiresAt: data.refreshExpiresAt,
         createdAt: now,
         updatedAt: now,
       };

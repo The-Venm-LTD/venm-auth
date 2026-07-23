@@ -18,6 +18,8 @@ export interface ServerSession {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  /** Absolute timestamp (ms) when the refresh token expires. Used for DB TTL cleanup. */
+  refreshExpiresAt: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -27,6 +29,8 @@ export interface CreateSessionData {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  /** Absolute timestamp (ms) when the refresh token expires. Used for DB TTL cleanup. */
+  refreshExpiresAt: number;
 }
 
 // ── Adapter Interface ───────────────────────────────────────────────

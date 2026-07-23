@@ -173,8 +173,16 @@ function createMemoryAdapter() {
       const session = sessions.get(token);
       if (!session) return null;
       const updated = { ...session, ...data, updatedAt: new Date().toISOString() };
-      sessions.set(session.accessToken, updated);
-      sessions.set(session.refreshToken, updated);
+      // Remove old token keys if tokens were rotated
+      if (data.accessToken && data.accessToken !== session.accessToken) {
+        sessions.delete(session.accessToken);
+      }
+      if (data.refreshToken && data.refreshToken !== session.refreshToken) {
+        sessions.delete(session.refreshToken);
+      }
+      // Store under the new tokens
+      sessions.set(updated.accessToken, updated);
+      sessions.set(updated.refreshToken, updated);
       return updated;
     },
   };

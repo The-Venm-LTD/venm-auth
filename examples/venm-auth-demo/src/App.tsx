@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, useCallback, type ReactNode } from "react";
 import {
   VenmProvider,
   VenmAuth,
@@ -11,7 +11,7 @@ import {
   DEVELOPMENT,
   PRODUCTION,
 } from "venm-auth";
-import type { Layout, ProviderType } from "venm-auth";
+import type { Layout, ProviderType, AuthState } from "venm-auth";
 import "./App.css";
 
 // ── Configuration ───────────────────────────────────────────────────
@@ -36,24 +36,69 @@ const VENM_CONFIG = {
   },
 };
 
+// ── Event Log Types ─────────────────────────────────────────────────
+
+interface AuthEvent {
+  id: number;
+  timestamp: Date;
+  type: string;
+  detail: string;
+}
+
+let eventIdCounter = 0;
+
 // ── App Root ─────────────────────────────────────────────────────────
 
 export default function App() {
+  const [events, setEvents] = useState<AuthEvent[]>([]);
+
+  const addEvent = useCallback((type: string, detail: string) => {
+    const event: AuthEvent = {
+      id: ++eventIdCounter,
+      timestamp: new Date(),
+      type,
+      detail,
+    };
+    setEvents((prev) => [event, ...prev].slice(0, 50));
+  }, []);
+
+  const handleAuthStateChange = useCallback(
+    (state: AuthState) => {
+      if (state.loading) {
+        addEvent("Loading", "Auth state loading…");
+      } else if (state.user && state.session) {
+        addEvent(
+          "Authenticated",
+          `User "${state.user.email}" — token expires at ${new Date(
+            state.session.expiresAt
+          ).toLocaleTimeString()}`
+        );
+      } else if (state.error) {
+        addEvent("Error", `${state.error.code}: ${state.error.message}`);
+      } else {
+        addEvent("Unauthenticated", "No active session");
+      }
+      console.log("[venm-auth] Auth state:", state);
+    },
+    [addEvent]
+  );
+
   return (
-    <VenmProvider
-      config={VENM_CONFIG}
-      onAuthStateChange={(state) => {
-        console.log("[venm-auth] Auth state:", state);
-      }}
-    >
-      <PageShell />
+    <VenmProvider config={VENM_CONFIG} onAuthStateChange={handleAuthStateChange}>
+      <PageShell events={events} onClearEvents={() => setEvents([])} />
     </VenmProvider>
   );
 }
 
 // ── Shell: layout + global chrome ─────────────────────────────────────
 
-function PageShell() {
+function PageShell({
+  events,
+  onClearEvents,
+}: {
+  events: AuthEvent[];
+  onClearEvents: () => void;
+}) {
   return (
     <div className="app">
       <header className="header">
@@ -62,7 +107,9 @@ function PageShell() {
             <span className="logo-icon">🔐</span>
             Venm Auth
           </span>
-          <span className="badge">Demo</span>
+          <div className="header-right">
+            <span className="badge">Demo</span>
+          </div>
         </div>
       </header>
 
@@ -81,6 +128,37 @@ function PageShell() {
         <Authenticated>
           <Dashboard />
         </Authenticated>
+
+        {/* Auth Event Log — visible in both states */}
+        <section className="card card-events">
+          <div className="card-header">
+            <h2>Auth Events</h2>
+            {events.length > 0 && (
+              <button className="btn btn-sm btn-ghost" onClick={onClearEvents}>
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="card-body">
+            {events.length === 0 ? (
+              <p className="hint">No auth events yet.</p>
+            ) : (
+              <div className="event-log">
+                {events.map((evt) => (
+                  <div key={evt.id} className={`event-row event-${evt.type.toLowerCase()}`}>
+                    <span className="event-time">
+                      {evt.timestamp.toLocaleTimeString()}
+                    </span>
+                    <span className={`event-type-badge event-type-${evt.type.toLowerCase()}`}>
+                      {evt.type}
+                    </span>
+                    <span className="event-detail">{evt.detail}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
       </main>
 
       <footer className="footer">
@@ -98,7 +176,6 @@ function LoginPage() {
   const [layout, setLayout] = useState<Layout>("card");
   const [selectedProviders, setSelectedProviders] = useState<ProviderType[]>([
     "google",
-    // "facebook",
   ]);
 
   function toggleProvider(p: ProviderType) {
@@ -118,6 +195,19 @@ function LoginPage() {
         </p>
       </div>
 
+      {/* Provider Toggles */}
+      <div className="provider-toggles">
+        {(["google", "facebook"] as ProviderType[]).map((p) => (
+          <button
+            key={p}
+            className={`btn btn-provider-toggle ${selectedProviders.includes(p) ? "active" : ""}`}
+            onClick={() => toggleProvider(p)}
+          >
+            {p === "google" ? "G" : "F"} {p}
+          </button>
+        ))}
+      </div>
+
       {/* Auth Buttons */}
       <div className="auth-section">
         {selectedProviders.length > 0 ? (
@@ -131,11 +221,19 @@ function LoginPage() {
         )}
       </div>
 
-      <p className="hint">
-        Click a provider button to simulate the OAuth popup flow —
-        <br />
-        the SDK dispatches provider authentication via a popup window.
-      </p>
+      {/* Layout Toggle */}
+      <div className="layout-toggles">
+        <span className="row-label small-label">Layout:</span>
+        {(["card", "vertical", "horizontal"] as Layout[]).map((l) => (
+          <button
+            key={l}
+            className={`btn btn-sm ${layout === l ? "active" : "btn-ghost"}`}
+            onClick={() => setLayout(l)}
+          >
+            {l.charAt(0).toUpperCase() + l.slice(1)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
@@ -143,16 +241,76 @@ function LoginPage() {
 // ── Dashboard (authenticated) ────────────────────────────────────────
 
 function Dashboard() {
-  const { logout, error } = useAuth();
+  const { logout, refresh, error, loading: authLoading } = useAuth();
   const { user, loading: userLoading } = useUser();
-  const { accessToken, expiresAt, loading: sessionLoading } = useSession();
+  const { accessToken, refreshToken, expiresAt, loading: sessionLoading } = useSession();
   const [loggingOut, setLoggingOut] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshResult, setRefreshResult] = useState<{
+    type: "success" | "error";
+    message: string;
+  } | null>(null);
+
+  // Live countdown
+  const [timeUntilExpiry, setTimeUntilExpiry] = useState<string>("—");
+  const [expiryProgress, setExpiryProgress] = useState<number>(0);
+
+  useEffect(() => {
+    if (!expiresAt) {
+      setTimeUntilExpiry("—");
+      setExpiryProgress(0);
+      return;
+    }
+
+    // Store the initial duration for progress calculation
+    const initialDuration = 15 * 60 * 1000; // 15 min default — best guess
+
+    function update() {
+      const now = Date.now();
+      const remaining = expiresAt - now;
+      if (remaining <= 0) {
+        setTimeUntilExpiry("Expired");
+        setExpiryProgress(100);
+        return;
+      }
+      const seconds = Math.floor(remaining / 1000);
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      setTimeUntilExpiry(`${mins}:${secs.toString().padStart(2, "0")}`);
+      setExpiryProgress(Math.max(0, Math.min(100, ((initialDuration - remaining) / initialDuration) * 100)));
+    }
+
+    update();
+    const interval = setInterval(update, 1000);
+    return () => clearInterval(interval);
+  }, [expiresAt]);
 
   async function handleLogout() {
     setLoggingOut(true);
     await logout();
     setLoggingOut(false);
   }
+
+  async function handleRefresh() {
+    setRefreshing(true);
+    setRefreshResult(null);
+    try {
+      await refresh();
+      setRefreshResult({ type: "success", message: "Session refreshed successfully" });
+    } catch (err: any) {
+      setRefreshResult({
+        type: "error",
+        message: err?.message ?? "Refresh failed",
+      });
+    } finally {
+      setRefreshing(false);
+      setTimeout(() => setRefreshResult(null), 4000);
+    }
+  }
+
+  const expiryPercent = Math.round(expiryProgress);
+  const isExpired = timeUntilExpiry === "Expired";
+  const isExpiringSoon = !isExpired && expiresAt && expiresAt - Date.now() < 120_000;
 
   return (
     <div className="page">
@@ -172,12 +330,14 @@ function Dashboard() {
               <div className="profile-details">
                 <h3>{user.name}</h3>
                 <p className="profile-email">{user.email}</p>
-                <span className={`provider-badge provider-${user.provider}`}>
-                  {user.provider === "google" ? "G" : "F"}
-                </span>
-                {user.emailVerified ? (
-                  <span className="verified-badge">✓ Verified</span>
-                ) : null}
+                <div className="profile-badges">
+                  <span className={`provider-badge provider-${user.provider}`}>
+                    {user.provider === "google" ? "Google" : "Facebook"}
+                  </span>
+                  {user.emailVerified && (
+                    <span className="verified-badge">✓ Verified</span>
+                  )}
+                </div>
               </div>
             </div>
           ) : null}
@@ -194,16 +354,37 @@ function Dashboard() {
             </div>
           ) : (
             <div className="card-body session-info">
+              {/* Expiry countdown */}
+              <div className="countdown-section">
+                <div className="countdown-label">
+                  <span>Access token</span>
+                  <span className={`countdown-value ${isExpired ? "expired" : isExpiringSoon ? "warning" : ""}`}>
+                    {timeUntilExpiry}
+                  </span>
+                </div>
+                <div className="progress-bar-track">
+                  <div
+                    className={`progress-bar-fill ${isExpired ? "fill-expired" : isExpiringSoon ? "fill-warning" : "fill-ok"}`}
+                    style={{ width: `${expiryPercent}%` }}
+                  />
+                </div>
+                <div className="countdown-hint">
+                  Auto-refreshes ~2 minutes before expiry
+                </div>
+              </div>
+
+              <Row label="Status">
+                <span className={`status-dot ${isExpired ? "inactive" : "active"}`} />
+                {isExpired ? "Expired" : "Active"}
+              </Row>
+              <Row label="Expires At">
+                {expiresAt ? new Date(expiresAt).toLocaleTimeString() : "—"}
+              </Row>
               <Row label="Access Token">
                 <code className="truncate">{accessToken?.slice(0, 48)}…</code>
               </Row>
-              <Row label="Expires">
-                {expiresAt
-                  ? new Date(expiresAt).toLocaleString()
-                  : "—"}
-              </Row>
-              <Row label="Status">
-                <span className="status-dot active" /> Active
+              <Row label="Refresh Token">
+                <code className="truncate">{refreshToken?.slice(0, 32)}…</code>
               </Row>
             </div>
           )}
@@ -215,16 +396,42 @@ function Dashboard() {
             <h2>Actions</h2>
           </div>
           <div className="card-body actions">
-            <p className="hint">
-              You are authenticated. Use the button below to sign out.
-            </p>
-            <button
-              className="btn btn-logout"
-              onClick={handleLogout}
-              disabled={loggingOut}
-            >
-              {loggingOut ? "Signing out…" : "Sign Out"}
-            </button>
+            <div className="action-buttons">
+              <button
+                className="btn btn-refresh"
+                onClick={handleRefresh}
+                disabled={refreshing || authLoading}
+              >
+                {refreshing ? (
+                  <>
+                    <span className="spinner-xs" /> Refreshing…
+                  </>
+                ) : (
+                  "⟳ Refresh Session"
+                )}
+              </button>
+              <button
+                className="btn btn-logout"
+                onClick={handleLogout}
+                disabled={loggingOut}
+              >
+                {loggingOut ? "Signing out…" : "Sign Out"}
+              </button>
+            </div>
+
+            {refreshResult && (
+              <div className={`refresh-result refresh-${refreshResult.type}`}>
+                {refreshResult.type === "success" ? "✓" : "✗"} {refreshResult.message}
+              </div>
+            )}
+
+            <div className="token-info">
+              <p className="hint">
+                The access token expires every 15 minutes. Auto-refresh keeps your
+                session alive while the tab is open. Close the tab and come back
+                within 30 days — the refresh token will restore your session.
+              </p>
+            </div>
           </div>
         </section>
 

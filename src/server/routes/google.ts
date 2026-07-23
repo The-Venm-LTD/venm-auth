@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import type { DatabaseAdapter, CreateUserData } from "../database/adapter";
 import type { GoogleOAuthConfig } from "../oauth/google";
 import { handleGoogleCallback } from "../oauth/google";
-import { generateTokens } from "../jwt/generate";
+import { generateTokens, type TokenExpiryOptions } from "../jwt/generate";
 import { stateCookieMiddleware } from "../middleware/csrf";
 import { callbackHtml } from "../utils/callback-html";
 import type { OauthResultStore } from "../store/oauth-result-store";
@@ -18,7 +18,8 @@ export function createGoogleRoutes(
   jwtSecret: string,
   db: DatabaseAdapter,
   prefix: string = "/api/auth",
-  oauthResultStore?: OauthResultStore
+  oauthResultStore?: OauthResultStore,
+  tokenExpiry?: TokenExpiryOptions
 ): Router {
   const router = Router();
 
@@ -183,9 +184,9 @@ export function createGoogleRoutes(
         return;
       }
 
-      // Generate JWT tokens
+      // Generate JWT tokens (using configured expiry, or defaults)
       const tokenPayload = { sub: user.id, email: user.email, provider: user.provider };
-      const jwtTokens = await generateTokens(tokenPayload, jwtSecret);
+      const jwtTokens = await generateTokens(tokenPayload, jwtSecret, tokenExpiry);
 
       console.log(`[venm-auth] Google OAuth: tokens generated, session will expire at ${new Date(jwtTokens.expiresAt).toISOString()}`);
 
@@ -195,6 +196,7 @@ export function createGoogleRoutes(
         accessToken: jwtTokens.accessToken,
         refreshToken: jwtTokens.refreshToken,
         expiresAt: jwtTokens.expiresAt,
+        refreshExpiresAt: jwtTokens.refreshExpiresAt,
       });
 
       console.log(`[venm-auth] Google OAuth: success for user ${user.id}`);

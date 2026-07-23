@@ -1,13 +1,14 @@
 import { Router, type Request, type Response } from "express";
 import type { DatabaseAdapter } from "../database/adapter";
 import { verifyRefreshToken } from "../jwt/verify";
-import { generateTokens } from "../jwt/generate";
+import { generateTokens, type TokenExpiryOptions } from "../jwt/generate";
 
 // ── Route Builder ──────────────────────────────────────────────────
 
 export function createRefreshRoutes(
   jwtSecret: string,
-  db: DatabaseAdapter
+  db: DatabaseAdapter,
+  tokenExpiry?: TokenExpiryOptions
 ): Router {
   const router = Router();
 
@@ -47,16 +48,20 @@ export function createRefreshRoutes(
         return;
       }
 
-      // Generate new tokens
+      // Generate new tokens (using configured expiry, or defaults)
       const newTokens = await generateTokens(
         { sub: user.id, email: user.email, provider: user.provider },
-        jwtSecret
+        jwtSecret,
+        tokenExpiry
       );
 
-      // Update session in database
+      // 🐛 FIX: Also update refreshToken in the database so subsequent
+      // refresh attempts can find the session by the new refresh token.
       await db.updateSession(refreshToken, {
         accessToken: newTokens.accessToken,
+        refreshToken: newTokens.refreshToken,
         expiresAt: newTokens.expiresAt,
+        refreshExpiresAt: newTokens.refreshExpiresAt,
       });
 
       res.json({
