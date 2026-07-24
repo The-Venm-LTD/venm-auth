@@ -5,6 +5,7 @@ import type { SessionConfig } from "./session/index";
 import type { GoogleOAuthConfig } from "./oauth/google";
 import type { FacebookOAuthConfig } from "./oauth/facebook";
 import { createGoogleRoutes } from "./routes/google";
+import { createGoogleOneTapRoutes } from "./routes/google-onetap";
 import { createFacebookRoutes } from "./routes/facebook";
 import { createResultRoutes } from "./routes/result";
 import { createSessionRoutes } from "./routes/session";
@@ -109,6 +110,8 @@ export function createVenmAuth(config: VenmAuthConfig): Router {
   // ── OAuth Routes ──────────────────────────────────────────────
   if (google) {
     router.use("/google", oauthRateLimiter, csrfProtection(config.allowedOrigins), createGoogleRoutes(google, jwtSecret, db, config.prefix, oauthResultStore, tokenExpiry));
+    // Google One Tap route — accepts ID tokens from the Capacitor native plugin
+    router.use("/google/onetap", oauthRateLimiter, csrfProtection(config.allowedOrigins), createGoogleOneTapRoutes(google, jwtSecret, db, tokenExpiry));
   }
 
   if (facebook) {

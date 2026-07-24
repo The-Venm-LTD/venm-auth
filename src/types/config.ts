@@ -1,5 +1,10 @@
+export interface GoogleOAuthConfig {
+  /** Default Google OAuth client ID (for web/popup flow). */
+  clientId: string;
+}
+
 export interface OAuthConfig {
-  google?: { clientId: string };
+  google?: GoogleOAuthConfig;
   facebook?: { appId: string };
 }
 

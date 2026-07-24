@@ -6,3 +6,5 @@ export { createLogger } from "./logger";
 export type { Logger } from "./logger";
 export { sleep } from "./sleep";
 export { validateConfig, validateProvider, ConfigError } from "./validate";
+export { detectPlatform } from "./platform";
+export type { Platform } from "./platform";

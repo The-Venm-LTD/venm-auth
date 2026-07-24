@@ -1,0 +1,426 @@
+/* ── Override Ionic CSS Variables ─────────────────────────────────── */
+:root {
+  --ion-font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  --ion-background-color: #0f0f13;
+  --ion-background-color-rgb: 15, 15, 19;
+  --ion-toolbar-background: #1a1a23;
+  --ion-card-background: #1a1a23;
+  --ion-item-background: #1a1a23;
+  --ion-border-color: #2a2a3a;
+  --ion-text-color: #e8e8ed;
+  --ion-text-color-rgb: 232, 232, 237;
+  --ion-color-step-50: #1e1e2a;
+  --ion-color-step-100: #23232f;
+  --ion-color-step-150: #282834;
+  --ion-color-step-200: #2d2d39;
+  --ion-color-step-250: #32323e;
+  --ion-color-step-300: #373743;
+  --ion-color-step-350: #3c3c48;
+  --ion-color-step-400: #41414d;
+  --ion-color-step-450: #464652;
+  --ion-color-step-500: #4b4b57;
+  --ion-color-step-550: #50505c;
+  --ion-color-step-600: #555561;
+  --ion-color-step-650: #5a5a66;
+  --ion-color-step-700: #5f5f6b;
+  --ion-color-step-750: #646470;
+  --ion-color-step-800: #696975;
+  --ion-color-step-850: #6e6e7a;
+  --ion-color-step-900: #73737f;
+  --ion-color-step-950: #787884;
+  --ion-color-primary: #6c5ce7;
+  --ion-color-primary-rgb: 108, 92, 231;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-shade: #5f51cb;
+  --ion-color-primary-tint: #7b6de9;
+  --ion-color-success: #00cec9;
+  --ion-color-warning: #fdcb6e;
+  --ion-color-danger: #ff6b6b;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────── */
+.toolbar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.toolbar-logo {
+  font-size: 1.3rem;
+}
+
+/* ── Auth Status Banner ──────────────────────────────────────────── */
+.auth-status-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 16px;
+  margin-bottom: 16px;
+  background: rgba(108, 92, 231, 0.08);
+  border-radius: 10px;
+  border: 1px solid rgba(108, 92, 231, 0.15);
+}
+
+.auth-status-text {
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ion-color-medium);
+}
+
+/* ── Loading Container ───────────────────────────────────────────── */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 64px 0;
+}
+
+.spinner-custom {
+  width: 36px;
+  height: 36px;
+  border: 3px solid rgba(108, 92, 231, 0.2);
+  border-top-color: var(--ion-color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.loading-text {
+  font-size: 0.92rem;
+  color: var(--ion-color-medium);
+  margin: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Login Page ──────────────────────────────────────────────────── */
+.login-page {
+  min-height: 100%;
+  display: flex;
+  align-items: flex-start;
+}
+
+.login-hero {
+  text-align: center;
+  padding: 24px 0 16px;
+}
+
+.login-hero-icon {
+  font-size: 3rem;
+  margin-bottom: 12px;
+}
+
+.login-title {
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  margin: 0 0 8px;
+}
+
+.login-subtitle {
+  font-size: 0.95rem;
+  line-height: 1.5;
+  max-width: 320px;
+  margin: 0 auto;
+}
+
+.auth-mode-card {
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.auth-mode-card ion-card-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.mode-description {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  display: block;
+  padding: 0 4px;
+}
+
+.mode-description code {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.78rem;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.signin-card {
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+}
+
+.signin-card ion-card-content {
+  padding: 20px 16px;
+}
+
+.signin-heading {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0 0 16px;
+  text-align: center;
+}
+
+.auth-buttons-container {
+  margin-bottom: 16px;
+}
+
+.signin-footer {
+  text-align: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--ion-border-color);
+}
+
+.signin-footer ion-note {
+  font-size: 0.75rem;
+  line-height: 1.5;
+  display: block;
+}
+
+/* ── Dashboard Page ──────────────────────────────────────────────── */
+.dashboard-page {
+  min-height: 100%;
+}
+
+.dashboard-card {
+  border-radius: 14px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.25);
+  margin-bottom: 4px;
+}
+
+.dashboard-card ion-card-header {
+  padding-bottom: 8px;
+}
+
+.dashboard-card ion-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.dashboard-card ion-card-title ion-icon {
+  font-size: 1.1rem;
+}
+
+/* Profile */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  flex-shrink: 0;
+}
+
+.avatar-fallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  background: var(--ion-color-primary);
+  color: #fff;
+  border-radius: 50%;
+}
+
+.profile-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 2px;
+}
+
+.profile-email {
+  font-size: 0.88rem;
+  margin: 0 0 8px;
+}
+
+.profile-chips {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.profile-chips ion-chip {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+/* Countdown */
+.countdown-section {
+  margin-bottom: 4px;
+}
+
+.countdown-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.countdown-header ion-icon {
+  font-size: 1rem;
+  opacity: 0.7;
+}
+
+.countdown-value {
+  margin-left: auto;
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.95rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: rgba(0, 206, 201, 0.1);
+  color: var(--ion-color-success);
+}
+
+.countdown-value.countdown-warning {
+  background: rgba(253, 203, 110, 0.15);
+  color: var(--ion-color-warning);
+  animation: pulse 1s ease-in-out infinite;
+}
+
+.countdown-value.countdown-expired {
+  background: rgba(255, 107, 107, 0.15);
+  color: var(--ion-color-danger);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.countdown-note {
+  display: block;
+  font-size: 0.72rem;
+  margin-top: 6px;
+}
+
+/* Token truncation */
+.token-truncate {
+  font-family: "SF Mono", "Fira Code", monospace;
+  font-size: 0.72rem;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Action buttons */
+.action-buttons-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.action-buttons-row ion-button {
+  margin: 0;
+}
+
+/* Refresh toast */
+.refresh-toast {
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  animation: fadeIn 200ms ease;
+}
+
+.refresh-success {
+  background: rgba(0, 206, 201, 0.1);
+  color: var(--ion-color-success);
+  border: 1px solid rgba(0, 206, 201, 0.2);
+}
+
+.refresh-error {
+  background: rgba(255, 107, 107, 0.1);
+  color: var(--ion-color-danger);
+  border: 1px solid rgba(255, 107, 107, 0.2);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Token info note */
+.token-info-note {
+  display: block;
+  font-size: 0.78rem;
+  line-height: 1.6;
+  padding-top: 8px;
+  border-top: 1px solid var(--ion-border-color);
+}
+
+/* ─── Ionic Overrides ─────────────────────────────────────────────── */
+ion-content {
+  --padding-top: 8px;
+}
+
+ion-item {
+  --border-color: var(--ion-border-color);
+  --inner-padding-end: 0;
+}
+
+ion-chip {
+  --background: rgba(108, 92, 231, 0.1);
+  font-size: 0.72rem;
+}
+
+ion-segment {
+  --background: rgba(255, 255, 255, 0.04);
+}
+
+ion-segment-button {
+  --indicator-color: var(--ion-color-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+ion-progress-bar {
+  height: 4px;
+  border-radius: 999px;
+}

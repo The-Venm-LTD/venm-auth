@@ -16,6 +16,11 @@ export type { SessionConfig } from "./session/index";
 // ── OAuth ───────────────────────────────────────────────────────────
 export type { GoogleOAuthConfig, GoogleTokens, GoogleProfile, GoogleCallbackResult } from "./oauth/google";
 export { exchangeGoogleCode, fetchGoogleProfile, handleGoogleCallback } from "./oauth/google";
+export type { GoogleOneTapTokenPayload, VerifyOneTapTokenResult } from "./oauth/google-onetap";
+export { verifyGoogleOneTapToken } from "./oauth/google-onetap";
+export { createGoogleOneTapRoutes } from "./routes/google-onetap";
+
+// ── Facebook OAuth ──────────────────────────────────────────────────
 export type { FacebookOAuthConfig, FacebookTokens, FacebookProfile, FacebookCallbackResult } from "./oauth/facebook";
 export { exchangeFacebookCode, fetchFacebookProfile, handleFacebookCallback } from "./oauth/facebook";
 

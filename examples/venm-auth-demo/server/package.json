@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon --watch . --ignore node_modules/ --ext js,json,env index.js"
+    "dev": "nodemon --watch . --watch ../vars --ignore node_modules/ --ext js,json,env index.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

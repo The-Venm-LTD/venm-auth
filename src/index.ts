@@ -16,6 +16,7 @@ export type {
 export type {
   AuthResponse,
   LoginResponse,
+  OneTapResponse,
   RefreshResponse,
   VerifyResponse,
   ErrorResponse,
@@ -30,12 +31,22 @@ export type {
   ThemeConfig,
 } from "./types/theme";
 
+// ── Component Type Exports ──────────────────────────────────────────
+export type { VenmProviderProps } from "./components/VenmProvider";
+export type { VenmAuthProps } from "./components/VenmAuth";
+export type { GoogleButtonProps } from "./components/GoogleButton";
+export type { FacebookButtonProps } from "./components/FacebookButton";
+export type { AuthenticatedProps } from "./components/Authenticated";
+export type { UnauthenticatedProps } from "./components/Unauthenticated";
+export type { LoadingProps } from "./components/Loading";
+
 // ── Hooks ────────────────────────────────────────────────────────────
 export { useAuth } from "./hooks/useAuth";
 export { useUser } from "./hooks/useUser";
 export { useSession } from "./hooks/useSession";
 export { useLogin } from "./hooks/useLogin";
 export { useLogout } from "./hooks/useLogout";
+export { useGoogleOneTap } from "./hooks/useGoogleOneTap";
 
 // ── Components ───────────────────────────────────────────────────────
 export { VenmProvider } from "./components/VenmProvider";

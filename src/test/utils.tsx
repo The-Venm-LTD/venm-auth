@@ -35,8 +35,10 @@ export function renderWithAuth(
     loading: false,
     error: null,
     login: async () => {},
+    loginWithIdToken: async () => {},
     logout: async () => {},
     refresh: async () => {},
+    googleClientId: "",
     ...options.contextValue,
   };
 

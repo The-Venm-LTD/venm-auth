@@ -4,18 +4,25 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n client,server -c cyan,yellow \"vite\" \"cd server && pnpm dev\"",
-    "dev:client": "vite",
+    "dev": "concurrently -n demo,ionic,server -c cyan,green,yellow \"vite\" \"cd ionic && vite\" \"cd server && pnpm dev\"",
+    "dev:demo": "vite",
+    "dev:ionic": "cd ionic && vite",
     "dev:server": "cd server && pnpm dev",
     "build": "vite build",
-    "preview": "vite preview"
+    "build:ionic": "cd ionic && tsc && vite build",
+    "preview": "vite preview",
+    "cap:sync": "cd ionic && cap sync",
+    "cap:open:android": "cd ionic && cap open android",
+    "cap:run:android": "cd ionic && cap run android"
   },
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "capacitor-native-google-one-tap-signin": "^7.0.0",
     "venm-auth": "workspace:*"
   },
   "devDependencies": {
+    "@capacitor/cli": "^7.0.0",
     "@vitejs/plugin-react": "^4.3.0",
     "concurrently": "^10.0.3",
     "vite": "^5.4.0"

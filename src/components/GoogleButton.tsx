@@ -1,6 +1,10 @@
 import React, { useCallback, type ReactNode } from "react";
 import { useAuth } from "../hooks/useAuth";
+import { useAuthContext } from "../context/AuthContext";
+import { useGoogleOneTap } from "../hooks/useGoogleOneTap";
 import { googleButtonStyle, spinnerStyle, buttonDisabledStyle } from "../styles";
+
+// ── Props ──────────────────────────────────────────────────────────
 
 export interface GoogleButtonProps {
   onClick?: () => void;
@@ -8,7 +12,28 @@ export interface GoogleButtonProps {
   loading?: boolean;
   children?: ReactNode;
   className?: string;
+  /**
+   * When provided, uses the Capacitor native Google One Tap plugin for
+   * sign-in instead of the browser popup-based OAuth flow. Requires
+   * `capacitor-native-google-one-tap-signin` to be installed.
+   *
+   * - `true`: Uses the client ID from the SDK config's `oauth.google.clientId`
+   * - A `string`: Uses the given value as the Google client ID
+   * - `{ clientId: string }`: Uses the object's `clientId` value
+   */
+  useCapacitorOnetap?: boolean | string | { clientId: string };
+  /**
+   * Defines which native flow to use if useCapacitorOnetap is true.
+   * - "autoOrOneTap": Attempts auto sign-in, falls back to One Tap dialog
+   * - "oneTap": Shows the One Tap dialog
+   * - "nativeButton": Uses signInWithGoogleButtonFlowForNative
+   * 
+   * @default "autoOrOneTap"
+   */
+  nativeFlow?: "autoOrOneTap" | "oneTap" | "nativeButton";
 }
+
+// ── Component ──────────────────────────────────────────────────────
 
 export function GoogleButton({
   onClick,
@@ -16,18 +41,58 @@ export function GoogleButton({
   loading = false,
   children,
   className,
+  useCapacitorOnetap,
+  nativeFlow = "autoOrOneTap",
 }: GoogleButtonProps) {
   const { login, loading: authLoading } = useAuth();
+  const { googleClientId } = useAuthContext();
+
+  // Resolve client ID for Capacitor One Tap — always call the hook
+  // unconditionally to comply with React's Rules of Hooks.
+  // When the prop is not set or set to `true`, look up the client ID from
+  // the SDK config (accessible via the auth context).
+  const oneTapClientId =
+    typeof useCapacitorOnetap === "string"
+      ? useCapacitorOnetap
+      : typeof useCapacitorOnetap === "object" && useCapacitorOnetap !== null
+        ? useCapacitorOnetap.clientId
+        : useCapacitorOnetap === true
+          ? googleClientId
+          : "";
+
+  // Always call the hook unconditionally
+  const oneTap = useGoogleOneTap(oneTapClientId);
 
   const handleClick = useCallback(() => {
     if (onClick) {
       onClick();
+    } else if (useCapacitorOnetap && oneTap.isAvailable) {
+      // Capacitor One Tap is available — use the native flow.
+      let promise;
+      if (nativeFlow === "nativeButton") {
+        promise = oneTap.signInWithGoogleButtonFlowForNative();
+      } else if (nativeFlow === "oneTap") {
+        promise = oneTap.tryOneTapSignIn();
+      } else {
+        promise = oneTap.tryAutoOrOneTapSignIn();
+      }
+
+      promise.catch((err) => {
+        // Safety net: if initialization somehow fails (e.g. race condition
+        // with eager check), fall back to the popup OAuth flow.
+        console.debug(
+          "[venm-auth] Google One Tap unavailable, using popup fallback:",
+          err
+        );
+        login("google");
+      });
     } else {
+      // Capacitor One Tap not available or not requested — use popup OAuth.
       login("google");
     }
-  }, [onClick, login]);
+  }, [onClick, login, useCapacitorOnetap, oneTap, nativeFlow]);
 
-  const isDisabled = disabled || loading || authLoading;
+  const isDisabled = disabled || loading || authLoading || oneTap.loading;
 
   return (
     <button
@@ -40,7 +105,7 @@ export function GoogleButton({
       }}
       type="button"
     >
-      {(loading || authLoading) && (
+      {(loading || authLoading || oneTap.loading) && (
         <span
           style={spinnerStyle}
           aria-hidden="true"

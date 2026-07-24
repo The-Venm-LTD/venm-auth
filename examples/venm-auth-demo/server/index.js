@@ -5,13 +5,13 @@
  * for Google and Facebook OAuth authentication.
  *
  * Usage:
- *   1. Copy .env.example to .env and fill in your credentials
+ *   1. Copy vars/.env.example to vars/.env and fill in your credentials
  *   2. pnpm install
- *   3. node server/index.js
- *   4. Open http://localhost:3001
+ *   3. pnpm dev  (starts web demo, ionic app, and this server concurrently)
+ *   4. Open http://localhost:3000 (web demo) or http://localhost:3002 (ionic)
  *
- * The Vite dev server runs on port 3000 and proxies auth requests
- * to this Express server on port 3001.
+ * The Vite dev servers run on port 3000 (demo) and 3002 (ionic) and proxy
+ * auth requests to this Express server on port 3001.
  */
 
 import express from "express";
@@ -23,18 +23,24 @@ import cors from "cors";
 // Use dynamic import for venm-auth (ESM package)
 const { createVenmAuth, createMongoDBAdapter } = await import("venm-auth/server");
 
-// Load environment variables
-config();
-
+// Load environment variables from the shared vars/ folder
 const __dirname = dirname(fileURLToPath(import.meta.url));
+const envPath = join(__dirname, "..", "vars", ".env");
+config({ path: envPath });
+
+console.log(`[demo] Loaded env from ${envPath}`);
 
 const app = express();
 const PORT = parseInt(process.env.PORT ?? "3001", 10);
 
 // ── CORS ────────────────────────────────────────────────────────────
-// Allow the Vite dev server (port 3000) to make requests
+// Allow the Vite dev servers (port 3000, 3002) to make requests
+const clientOrigins = process.env.CLIENT_ORIGIN
+  ? process.env.CLIENT_ORIGIN.split(",").map(o => o.trim())
+  : ["http://localhost:3000", "http://localhost:3002"];
+
 app.use(cors({
-  origin: process.env.CLIENT_ORIGIN ?? "http://localhost:3000",
+  origin: clientOrigins,
   credentials: true,
 }));
 
@@ -73,7 +79,7 @@ app.use("/api/auth", createVenmAuth({
   database: databaseAdapter,
   prefix: "/api/auth",
   // Restrict token exchange POST requests to the client app's origin
-  allowedOrigins: [process.env.CLIENT_ORIGIN ?? "http://localhost:3000"],
+  allowedOrigins: clientOrigins,
 }));
 
 // ── Static files (production) ───────────────────────────────────────

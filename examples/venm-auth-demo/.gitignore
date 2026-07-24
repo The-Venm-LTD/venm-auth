@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+.tsbuildinfo
+*.tsbuildinfo
+local.properties
+*.log
+.DS_Store
+
+# Shared env vars (secrets — never commit)
+vars/.env
+
+# Ionic / Capacitor Android
+ionic/android/
+ionic/dist/
+ionic/node_modules/
+ionic/*.apk
+ionic/*.aab

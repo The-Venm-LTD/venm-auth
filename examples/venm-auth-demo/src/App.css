@@ -142,6 +142,7 @@ body {
 
 /* ── Provider & Layout Toggles ────────────────────────────────────── */
 .provider-toggles,
+.mode-toggles,
 .layout-toggles {
   display: flex;
   align-items: center;
@@ -154,9 +155,18 @@ body {
   margin-top: 24px;
 }
 
+.mode-toggles + .layout-toggles {
+  margin-top: 12px;
+}
+
 .small-label {
   font-size: 0.78rem !important;
   min-width: auto !important;
+}
+
+.mode-icon {
+  font-size: 0.9rem;
+  line-height: 1;
 }
 
 .btn-provider-toggle {
@@ -184,6 +194,44 @@ body {
 /* ── Auth Section ─────────────────────────────────────────────────── */
 .auth-section {
   margin-bottom: 16px;
+}
+
+/* ── Auth Mode Info ──────────────────────────────────────────────── */
+.mode-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  background: rgba(108, 92, 231, 0.08);
+  border: 1px solid rgba(108, 92, 231, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--color-text-muted);
+}
+
+.mode-info code {
+  font-size: 0.78rem;
+  margin: 0 2px;
+}
+
+.mode-info-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.badge-capacitor {
+  flex-shrink: 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, #34a853, #4285f4);
+  color: #fff;
+  border-radius: 999px;
+  margin-top: 2px;
 }
 
 /* ── Loading ──────────────────────────────────────────────────────── */

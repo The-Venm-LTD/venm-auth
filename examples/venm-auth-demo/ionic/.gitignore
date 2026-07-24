@@ -3,4 +3,9 @@ dist/
 coverage/
 .tsbuildinfo
 *.tsbuildinfo
-test-app/
+android/
+*.apk
+*.aab
+local.properties
+*.log
+.DS_Store

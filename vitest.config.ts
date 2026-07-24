@@ -14,6 +14,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      // The capacitor-native-google-one-tap-signin plugin is an optional peer
+      // dependency. In tests, resolve to a mock to avoid resolution errors.
+      "capacitor-native-google-one-tap-signin": path.resolve(
+        __dirname,
+        "./src/test/__mocks__/capacitor-plugin.ts"
+      ),
     },
   },
 });

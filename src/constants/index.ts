@@ -24,6 +24,7 @@ export const POPUP_MESSAGE_CHANNEL = "venm_auth_response";
  */
 export const API_ENDPOINTS = {
   AUTH_GOOGLE: "/google",
+  AUTH_GOOGLE_ONE_TAP: "/google/onetap",
   AUTH_FACEBOOK: "/facebook",
   AUTH_LOGOUT: "/logout",
   AUTH_REFRESH: "/refresh",

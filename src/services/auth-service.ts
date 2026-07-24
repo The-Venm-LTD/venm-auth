@@ -1,10 +1,10 @@
 import type { ProviderType } from "../types/auth";
 import type { SDKConfig } from "../types/config";
-import type { Session } from "../types/session";
-import type {
+import type { Session } from "../types/session";import type {
   AuthResponse,
   RefreshResponse,
   VerifyResponse,
+  OneTapResponse,
 } from "../types/responses";
 import type { User } from "../types/user";
 import { HttpClient } from "./http-client";
@@ -19,6 +19,13 @@ export class AuthService {
   constructor(config: SDKConfig, getSession: GetSessionFn) {
     this.getSession = getSession;
     this.http = new HttpClient(config, getSession);
+  }
+
+  async loginWithGoogleOneTap(idToken: string): Promise<OneTapResponse> {
+    return this.http.request<OneTapResponse>("POST", API_ENDPOINTS.AUTH_GOOGLE_ONE_TAP, {
+      body: { idToken },
+      skipAuth: true,
+    });
   }
 
   async loginWithProvider(

@@ -8,6 +8,8 @@ export interface AuthResponse {
 
 export type LoginResponse = AuthResponse;
 
+export type OneTapResponse = AuthResponse;
+
 export interface RefreshResponse {
   session: Session;
 }

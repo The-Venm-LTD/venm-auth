@@ -11,7 +11,12 @@ import {
   DEVELOPMENT,
   PRODUCTION,
 } from "venm-auth";
-import type { Layout, ProviderType, AuthState } from "venm-auth";
+import type {
+  Layout,
+  ProviderType,
+  AuthState,
+  GoogleButtonProps,
+} from "venm-auth";
 import "./App.css";
 
 // ── Configuration ───────────────────────────────────────────────────
@@ -29,6 +34,10 @@ const VENM_CONFIG = {
     google: {
       // Set via VITE_GOOGLE_CLIENT_ID env var, or replace with your own
       clientId: import.meta.env.VITE_GOOGLE_CLIENT_ID ?? "your-google-client-id",
+      androidClientId:
+        import.meta.env.VITE_GOOGLE_CLIENT_ID_ANDROID ?? undefined,
+      iosClientId:
+        import.meta.env.VITE_GOOGLE_CLIENT_ID_IOS ?? undefined,
     },
     facebook: {
       appId: import.meta.env.VITE_FACEBOOK_APP_ID ?? "your-facebook-app-id",
@@ -177,6 +186,7 @@ function LoginPage() {
   const [selectedProviders, setSelectedProviders] = useState<ProviderType[]>([
     "google",
   ]);
+  const [enableCapacitorOnetap, setEnableCapacitorOnetap] = useState(false);
 
   function toggleProvider(p: ProviderType) {
     setSelectedProviders((prev) =>
@@ -185,6 +195,15 @@ function LoginPage() {
         : [...prev, p]
     );
   }
+
+  // Compute googleButton props based on Capacitor One Tap toggle
+  // When true, automatically resolves to the platform-appropriate client ID
+  // from the SDK config (supports androidClientId / iosClientId).
+  const googleButtonProps: Partial<GoogleButtonProps> = enableCapacitorOnetap
+    ? {
+        useCapacitorOnetap: true,
+      }
+    : {};
 
   return (
     <div className="page">
@@ -208,6 +227,38 @@ function LoginPage() {
         ))}
       </div>
 
+      {/* Auth Mode Toggles */}
+      <div className="mode-toggles">
+        <span className="row-label small-label">Auth mode:</span>
+        <button
+          className={`btn btn-sm ${!enableCapacitorOnetap ? "active" : "btn-ghost"}`}
+          onClick={() => setEnableCapacitorOnetap(false)}
+        >
+          <span className="mode-icon">🪟</span>
+          Popup OAuth
+        </button>
+        <button
+          className={`btn btn-sm ${enableCapacitorOnetap ? "active" : "btn-ghost"}`}
+          onClick={() => setEnableCapacitorOnetap(true)}
+        >
+          <span className="mode-icon">📱</span>
+          One Tap
+        </button>
+      </div>
+
+      {/* Mode Info */}
+      {enableCapacitorOnetap && (
+        <div className="mode-info">
+          <span className="badge badge-capacitor">Capacitor</span>
+          <span className="mode-info-text">
+            Uses the native Google One Tap plugin via Capacitor. Requires
+            <code>capacitor-native-google-one-tap-signin</code> to be installed.
+            In a regular browser, the plugin is not available and the button
+            will gracefully skip sign-in with a console warning.
+          </span>
+        </div>
+      )}
+
       {/* Auth Buttons */}
       <div className="auth-section">
         {selectedProviders.length > 0 ? (
@@ -215,6 +266,7 @@ function LoginPage() {
             providers={selectedProviders}
             layout={layout}
             showDivider={layout === "vertical"}
+            googleButtonProps={googleButtonProps}
           />
         ) : (
           <p className="hint">Select at least one provider above.</p>
@@ -262,12 +314,15 @@ function Dashboard() {
       return;
     }
 
+    // Narrow the type so closures (update) don't see `null`
+    const expiry = expiresAt;
+
     // Store the initial duration for progress calculation
     const initialDuration = 15 * 60 * 1000; // 15 min default — best guess
 
     function update() {
       const now = Date.now();
-      const remaining = expiresAt - now;
+      const remaining = expiry - now;
       if (remaining <= 0) {
         setTimeUntilExpiry("Expired");
         setExpiryProgress(100);

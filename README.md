@@ -4,6 +4,16 @@ React authentication SDK for Venm — integrate Google and Facebook OAuth login 
 
 ## What's New
 
+### 📱 Enhanced Native Capacitor One Tap
+
+The Google One Tap integration for Capacitor has been significantly improved:
+- **Simplified Client IDs**: You no longer need to provide separate Android and iOS Client IDs in your config! The SDK and Server now universally use your single Web Application Client ID for initialization and token audience verification. Native platform validation is handled securely by Google Play Services (via SHA-1) and iOS (via URL schemes).
+- **Flexible Native Flows**: The `<GoogleButton>` component now accepts a `nativeFlow` prop to customize the native Google Sign-in experience:
+  - `"autoOrOneTap"` (default): Attempts silent auto sign-in, falling back to the One Tap bottom sheet.
+  - `"oneTap"`: Forces the One Tap bottom sheet to appear.
+  - `"nativeButton"`: Triggers the traditional full-screen Google Sign-In prompt.
+  - All native flows include an automatic, safe fallback to the browser-based OAuth popup if the Capacitor plugin is unavailable or fails!
+
 ### 🛡️ React 18 StrictMode Safety
 
 Session initialization now uses a **cancellation flag** to safely handle React 18 StrictMode's double-mount behavior in development. Previously, two parallel `initialize()` calls could race — the first would rotate tokens on the server, the second would fail with `SESSION_NOT_FOUND`, clear localStorage, and log the user out. The cancellation flag ensures stale callbacks from unmounted effects are ignored.

@@ -1,0 +1,7 @@
+{
+  "name": "venm-auth-ionic-app",
+  "type": "react",
+  "integrations": {
+    "capacitor": {}
+  }
+}

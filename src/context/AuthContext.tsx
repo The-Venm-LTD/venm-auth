@@ -11,6 +11,7 @@ import type { AuthState, AuthAction, AuthContextValue, ProviderType, AuthError }
 import type { SDKConfig } from "../types/config";
 import { validateConfig } from "../utils/validate";
 import { createLogger } from "../utils/logger";
+
 import { AuthService } from "../services/auth-service";
 import { PopupManager } from "../services/popup-manager";
 import { SessionService } from "../services/session-service";
@@ -199,7 +200,49 @@ export function AuthProvider({
     };
   }, []);
 
-  // ── Login ────────────────────────────────────────────────────────
+  // ── Login with ID Token (Capacitor One Tap) ────────────────────
+
+  const loginWithIdToken = useCallback(
+    async (idToken: string) => {
+      const { authService, sessionService } = services.current!;
+
+      dispatch({ type: "LOADING" });
+
+      try {
+        const response = await authService.loginWithGoogleOneTap(idToken);
+
+        sessionService.saveSession(response.session, response.user);
+
+        dispatch({
+          type: "AUTHENTICATED",
+          payload: { user: response.user, session: response.session },
+        });
+      } catch (error) {
+        if (
+          error &&
+          typeof error === "object" &&
+          "code" in error &&
+          "message" in error
+        ) {
+          dispatch({ type: "ERROR", payload: error as AuthError });
+        } else {
+          dispatch({
+            type: "ERROR",
+            payload: {
+              code: "LOGIN_FAILED",
+              message:
+                error instanceof Error
+                  ? error.message
+                  : "Login failed unexpectedly",
+            },
+          });
+        }
+      }
+    },
+    []
+  );
+
+  // ── Login (Popup OAuth) ────────────────────────────────────────
 
   const login = useCallback(
     async (provider: ProviderType) => {
@@ -297,14 +340,19 @@ export function AuthProvider({
     }
   }, []);
 
+  const googleConfig = resolvedConfig.oauth?.google;
+  const googleClientId = googleConfig?.clientId || "";
+
   const contextValue: AuthContextValue = {
     user: state.user,
     session: state.session,
     loading: state.loading,
     error: state.error,
     login,
+    loginWithIdToken,
     logout,
     refresh,
+    googleClientId,
   };
 
   return (
